@@ -1846,7 +1846,7 @@ function updateUIForUser(user) {
   document.getElementById('ddName').textContent  = user.username;
   document.getElementById('ddEmail').textContent = user.email;
   const hw = document.getElementById('homeWelcome');
-  if (hw) hw.innerHTML = 'ยินดีต้อนรับกลับมา,<br>' + user.username + ' ✨';
+  if (hw) hw.innerHTML = 'Welcom back,<br>' + user.username + ' ✨';
   const pn = document.getElementById('profName');
   if (pn) pn.textContent = user.username;
   const pa = document.getElementById('profileAvatar');
