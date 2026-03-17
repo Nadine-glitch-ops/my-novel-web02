@@ -1,0 +1,2094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Library Hub</title>
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════
+   ROOT VARIABLES
+══════════════════════════════════════════ */
+:root {
+  --bg:          #0A0C14;
+  --bg-2:        #0F1220;
+  --bg-3:        #161928;
+  --bg-4:        #1D2235;
+  --border:      rgba(255,255,255,0.07);
+  --border-2:    rgba(255,255,255,0.12);
+
+  --txt:         #F0EEF8;
+  --txt-2:       #A8A4C0;
+  --txt-3:       #6B6882;
+
+  --accent:      #7C6DFA;
+  --accent-2:    #9B8DFF;
+  --accent-glow: rgba(124,109,250,0.25);
+  --accent-bg:   rgba(124,109,250,0.12);
+
+  --rose:        #F06080;
+  --rose-bg:     rgba(240,96,128,0.12);
+  --jade:        #34C88A;
+  --jade-bg:     rgba(52,200,138,0.12);
+  --amber:       #F5A623;
+  --amber-bg:    rgba(245,166,35,0.12);
+  --sky:         #4FC3F7;
+  --sky-bg:      rgba(79,195,247,0.12);
+
+  --sidebar-w:   252px;
+  --topbar-h:    62px;
+
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+
+  --shadow-sm: 0 2px 12px rgba(0,0,0,0.4);
+  --shadow-md: 0 8px 32px rgba(0,0,0,0.5);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.6);
+
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans:  'Outfit', system-ui, sans-serif;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--txt);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+/* ═══════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════ */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--txt-3); }
+
+/* ══════════════════════════════════════════
+   AUTH SCREEN
+══════════════════════════════════════════ */
+#authScreen {
+  position: fixed; inset: 0; z-index: 999;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+  overflow-y: auto; padding: 20px 16px;
+}
+
+/* Animated grid bg */
+#authScreen::before {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(124,109,250,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,109,250,0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at 50% 40%, black 30%, transparent 80%);
+}
+#authScreen::after {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 50% at 30% 30%, rgba(124,109,250,0.15) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 75% 70%, rgba(240,96,128,0.08) 0%, transparent 60%);
+}
+
+.auth-floats { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.auth-float {
+  position: absolute; font-size: 26px; opacity: 0.05;
+  animation: floatDrift linear infinite;
+  filter: blur(0.5px);
+}
+.auth-float:nth-child(1){left:5%;top:10%;font-size:40px;animation-duration:20s;}
+.auth-float:nth-child(2){left:88%;top:20%;font-size:22px;animation-duration:24s;animation-delay:-6s;}
+.auth-float:nth-child(3){left:15%;top:75%;font-size:32px;animation-duration:17s;animation-delay:-9s;}
+.auth-float:nth-child(4){left:75%;top:65%;font-size:20px;animation-duration:22s;animation-delay:-4s;}
+.auth-float:nth-child(5){left:50%;top:5%;font-size:28px;animation-duration:26s;animation-delay:-13s;}
+.auth-float:nth-child(6){left:92%;top:80%;font-size:36px;animation-duration:15s;animation-delay:-7s;}
+@keyframes floatDrift{0%{transform:translateY(0) rotate(0)}33%{transform:translateY(-20px) rotate(5deg)}66%{transform:translateY(10px) rotate(-4deg)}100%{transform:translateY(0) rotate(0)}}
+
+.auth-card {
+  position: relative; z-index: 1; width: 100%; max-width: 440px;
+  background: rgba(22,25,40,0.85);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-xl);
+  padding: 40px 38px 36px;
+  backdrop-filter: blur(40px);
+  box-shadow: 0 0 0 1px rgba(124,109,250,0.08) inset, var(--shadow-lg);
+  animation: cardIn 0.6s cubic-bezier(0.34,1.2,0.64,1) both;
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(36px) scale(0.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+
+.auth-logo {
+  font-family: var(--font-serif);
+  font-size: 30px; font-weight: 700; font-style: italic;
+  color: var(--txt); text-align: center; margin-bottom: 4px;
+  letter-spacing: -0.5px;
+}
+.auth-logo em { color: var(--accent); font-style: normal; }
+.auth-tagline {
+  text-align: center; font-size: 10.5px; color: var(--txt-3);
+  letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 30px;
+  font-weight: 500;
+}
+
+/* Tabs */
+.auth-tabs {
+  display: flex; background: rgba(255,255,255,0.04);
+  border-radius: var(--r-md); padding: 4px; margin-bottom: 26px;
+  border: 1px solid var(--border);
+}
+.auth-tab {
+  flex: 1; text-align: center; padding: 9px;
+  border-radius: var(--r-sm); font-size: 13px; font-weight: 600;
+  color: var(--txt-3); cursor: pointer; transition: all 0.25s; user-select: none;
+}
+.auth-tab.active { background: var(--accent); color: white; box-shadow: 0 2px 14px rgba(124,109,250,0.4); }
+.auth-tab:not(.active):hover { color: var(--txt-2); }
+
+/* Forms */
+.auth-form { display: none; animation: formIn 0.3s ease both; }
+.auth-form.active { display: block; }
+@keyframes formIn{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}
+
+/* Banners */
+.auth-err {
+  background: rgba(240,96,128,0.12); border: 1px solid rgba(240,96,128,0.3);
+  border-radius: var(--r-sm); padding: 10px 14px; font-size: 12.5px; color: #FF9090;
+  margin-bottom: 14px; display: none; gap: 8px; align-items: flex-start; line-height: 1.5;
+}
+.auth-err.show { display: flex; }
+.auth-ok {
+  background: var(--jade-bg); border: 1px solid rgba(52,200,138,0.3);
+  border-radius: var(--r-sm); padding: 10px 14px; font-size: 12.5px; color: #60E0A0;
+  margin-bottom: 14px; display: none; gap: 8px; align-items: flex-start; line-height: 1.5;
+}
+.auth-ok.show { display: flex; }
+
+/* Fields */
+.auth-field { margin-bottom: 14px; position: relative; }
+.auth-lbl {
+  display: block; font-size: 10.5px; font-weight: 700;
+  color: var(--txt-3); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px;
+}
+.auth-input {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid var(--border-2);
+  border-radius: var(--r-sm); padding: 11px 16px;
+  font-size: 14px; color: var(--txt);
+  font-family: var(--font-sans); outline: none; transition: all 0.2s;
+}
+.auth-input::placeholder { color: var(--txt-3); }
+.auth-input:focus {
+  border-color: rgba(124,109,250,0.6);
+  background: rgba(124,109,250,0.08);
+  box-shadow: 0 0 0 3px rgba(124,109,250,0.12);
+}
+.auth-input.err { border-color: rgba(240,96,128,0.6); background: rgba(240,96,128,0.07); }
+.auth-input:-webkit-autofill, .auth-input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px rgba(15,18,32,0.97) inset;
+  -webkit-text-fill-color: var(--txt);
+  transition: background-color 5000s ease-in-out 0s;
+}
+.field-hint { font-size: 11px; color: var(--txt-3); margin-top: 4px; }
+.field-err-msg { font-size: 11px; color: #FF8080; margin-top: 4px; display: none; animation: errIn 0.2s ease; }
+.field-err-msg.show { display: block; }
+@keyframes errIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+
+/* Password toggle */
+.pw-wrap { position: relative; }
+.pw-toggle {
+  position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
+  color: var(--txt-3); font-size: 15px; cursor: pointer; padding: 4px;
+  transition: color 0.2s; line-height: 1; user-select: none;
+}
+.pw-toggle:hover { color: var(--txt-2); }
+
+/* Password strength */
+.pw-strength { margin-top: 8px; display: none; }
+.pw-strength.show { display: block; }
+.pw-bars { display: flex; gap: 3px; margin-bottom: 4px; }
+.pw-bar {
+  flex: 1; height: 3px; border-radius: 2px;
+  background: rgba(255,255,255,0.08); transition: background 0.3s;
+}
+.pw-bar.weak { background: var(--rose); }
+.pw-bar.med  { background: var(--amber); }
+.pw-bar.str  { background: var(--jade); }
+.pw-str-lbl  { font-size: 10px; color: var(--txt-3); }
+
+/* Username check */
+.user-check { font-size: 11px; margin-top: 4px; min-height: 16px; }
+.user-check.ok { color: var(--jade); }
+.user-check.no { color: var(--rose); }
+.user-check.checking { color: var(--txt-3); }
+
+/* Remember / Forgot */
+.auth-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+.auth-remember { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+.auth-checkbox {
+  width: 16px; height: 16px; border-radius: 5px;
+  border: 1.5px solid var(--border-2);
+  background: rgba(255,255,255,0.04);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+}
+.auth-checkbox.on { background: var(--accent); border-color: var(--accent); }
+.auth-remember span { font-size: 12px; color: var(--txt-3); }
+.auth-forgot { font-size: 12px; color: var(--accent-2); cursor: pointer; transition: color 0.2s; }
+.auth-forgot:hover { color: var(--txt); text-decoration: underline; }
+
+/* Submit button */
+.auth-submit {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent), #9B8DFF);
+  color: white; border: none; border-radius: var(--r-md); padding: 13px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  font-family: var(--font-sans); transition: all 0.25s;
+  box-shadow: 0 4px 20px rgba(124,109,250,0.4);
+  position: relative; overflow: hidden; letter-spacing: 0.3px;
+}
+.auth-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(124,109,250,0.55); }
+.auth-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.auth-submit.loading { pointer-events: none; opacity: 0.8; }
+.auth-submit.loading .btn-txt { display: none; }
+.auth-submit.loading .btn-spin { display: block; }
+.btn-spin { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto; }
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Divider */
+.auth-div { display: flex; align-items: center; gap: 12px; margin: 16px 0; }
+.auth-div::before,.auth-div::after { content:''; flex:1; height:1px; background: var(--border); }
+.auth-div span { font-size: 11px; color: var(--txt-3); }
+
+/* Google button */
+.auth-google {
+  width: 100%; background: rgba(255,255,255,0.05); color: var(--txt-2);
+  border: 1.5px solid var(--border-2); border-radius: var(--r-md); padding: 11px;
+  font-size: 13.5px; font-weight: 600; cursor: pointer;
+  font-family: var(--font-sans); transition: all 0.22s;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.auth-google:hover { background: rgba(255,255,255,0.09); border-color: var(--border-2); color: var(--txt); transform: translateY(-1px); }
+
+/* Terms */
+.auth-terms { font-size: 11px; color: var(--txt-3); text-align: center; margin-top: 14px; line-height: 1.7; }
+.auth-terms a { color: var(--accent-2); cursor: pointer; }
+
+/* Reset back */
+.reset-back { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--txt-3); cursor: pointer; margin-bottom: 18px; transition: color 0.2s; }
+.reset-back:hover { color: var(--txt-2); }
+
+/* Success */
+.auth-success { display: none; text-align: center; padding: 8px 0 10px; animation: cardIn 0.5s cubic-bezier(0.34,1.2,0.64,1) both; }
+.auth-success.show { display: block; }
+.suc-glow {
+  width: 96px; height: 96px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(124,109,250,0.25) 0%, transparent 70%);
+  margin: 0 auto 14px; display: flex; align-items: center; justify-content: center; position: relative;
+}
+.suc-glow::before { content:''; position:absolute; inset:-8px; border-radius:50%; border:1.5px solid rgba(124,109,250,0.3); animation:glowRing 2s ease infinite; }
+.suc-glow::after  { content:''; position:absolute; inset:-22px; border-radius:50%; border:1px solid rgba(124,109,250,0.1); animation:glowRing 2s ease 0.4s infinite; }
+@keyframes glowRing{0%{transform:scale(1);opacity:1}100%{transform:scale(1.35);opacity:0}}
+.suc-icon { font-size: 48px; display: block; animation: iconPop 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.1s both; position: relative; z-index: 1; }
+@keyframes iconPop{from{transform:scale(0) rotate(-20deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+.suc-title { font-family: var(--font-serif); font-size: 28px; font-weight: 700; color: var(--txt); margin-bottom: 6px; animation: fadeUp 0.5s ease 0.35s both; }
+.suc-sub { font-size: 13px; color: var(--txt-2); margin-bottom: 16px; animation: fadeUp 0.5s ease 0.45s both; }
+.suc-badges { display: flex; justify-content: center; gap: 7px; flex-wrap: wrap; margin-bottom: 22px; animation: fadeUp 0.5s ease 0.55s both; }
+.suc-badge { background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 11px; color: var(--txt-3); }
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.suc-bar-wrap { background: rgba(255,255,255,0.07); border-radius: 4px; height: 3px; overflow: hidden; margin-bottom: 10px; animation: fadeUp 0.5s ease 0.65s both; }
+.suc-bar { height: 100%; background: linear-gradient(to right, var(--accent), var(--accent-2)); border-radius: 4px; width: 0%; transition: width 2.8s linear; }
+.suc-hint { font-size: 11px; color: var(--txt-3); animation: fadeUp 0.5s ease 0.75s both; }
+
+/* App container */
+#appContainer{display:none;}
+#appContainer.visible{display:flex;flex-direction:column;}
+
+/* ══════════════════════════════════════════
+   TOP NAVIGATION
+══════════════════════════════════════════ */
+.topnav {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--topbar-h);
+  background: rgba(10,12,20,0.92);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 24px;
+  z-index: 100; backdrop-filter: blur(20px);
+}
+.logo {
+  font-family: var(--font-serif); font-size: 26px; font-weight: 700; font-style: italic;
+  color: var(--txt); letter-spacing: -0.5px; cursor: pointer;
+  transition: opacity 0.2s; flex-shrink: 0; margin-right: 32px;
+}
+.logo:hover { opacity: 0.75; }
+.logo em { color: var(--accent); font-style: normal; }
+
+.nav-links { display: flex; align-items: center; gap: 2px; flex: 1; }
+.nav-link {
+  padding: 7px 14px; border-radius: var(--r-sm);
+  font-size: 13px; font-weight: 500; color: var(--txt-3);
+  cursor: pointer; transition: all 0.18s; position: relative;
+}
+.nav-link:hover { color: var(--txt-2); background: rgba(255,255,255,0.05); }
+.nav-link.active { color: var(--accent-2); background: var(--accent-bg); font-weight: 600; }
+.nav-link.active::after {
+  content: ''; position: absolute; bottom: -1px; left: 50%;
+  transform: translateX(-50%); width: 16px; height: 2px;
+  background: var(--accent); border-radius: 1px;
+}
+
+.nav-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.srch-wrap-top { position: relative; }
+.srch-input-top {
+  width: 220px; background: rgba(255,255,255,0.05);
+  border: 1.5px solid var(--border); border-radius: 24px;
+  padding: 8px 14px 8px 38px; font-size: 13px; color: var(--txt);
+  font-family: var(--font-sans); outline: none; transition: all 0.2s;
+}
+.srch-input-top::placeholder { color: var(--txt-3); }
+.srch-input-top:focus {
+  border-color: rgba(124,109,250,0.5); background: var(--accent-bg);
+  width: 260px; box-shadow: 0 0 0 3px rgba(124,109,250,0.1);
+}
+.srch-icon-top { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--txt-3); font-size: 13px; pointer-events: none; }
+
+.nav-btn {
+  width: 36px; height: 36px; border-radius: var(--r-sm);
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; cursor: pointer; transition: all 0.18s; position: relative;
+}
+.nav-btn:hover { background: var(--accent-bg); border-color: rgba(124,109,250,0.3); }
+.notif-dot {
+  width: 8px; height: 8px; background: var(--rose);
+  border-radius: 50%; position: absolute; top: -3px; right: -3px;
+  border: 2px solid var(--bg);
+  animation: dotPulse 2.5s ease infinite;
+}
+@keyframes dotPulse{0%,100%{box-shadow:0 0 0 0 rgba(240,96,128,0.4)}50%{box-shadow:0 0 0 5px rgba(240,96,128,0)}}
+
+/* User pill */
+.user-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+  border-radius: 24px; padding: 4px 12px 4px 4px;
+  cursor: pointer; transition: all 0.2s; position: relative;
+}
+.user-pill:hover { background: var(--accent-bg); border-color: rgba(124,109,250,0.3); }
+.user-pill-av {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #9B8DFF);
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.user-pill-name { font-size: 12.5px; font-weight: 600; color: var(--txt-2); }
+
+.user-dd {
+  position: absolute; top: calc(100% + 10px); right: 0;
+  background: var(--bg-3); border: 1px solid var(--border-2);
+  border-radius: var(--r-md); box-shadow: var(--shadow-md);
+  min-width: 180px; overflow: hidden;
+  opacity: 0; pointer-events: none;
+  transform: scale(0.94) translateY(-8px);
+  transition: all 0.2s cubic-bezier(0.34,1.2,0.64,1);
+  transform-origin: top right; z-index: 200;
+}
+.user-dd.open { opacity: 1; pointer-events: all; transform: scale(1) translateY(0); }
+.dd-head { padding: 12px 14px; border-bottom: 1px solid var(--border); background: var(--bg-4); }
+.dd-name { font-size: 13px; font-weight: 700; color: var(--txt); margin-bottom: 1px; }
+.dd-email { font-size: 10.5px; color: var(--txt-3); }
+.dd-item {
+  padding: 9px 14px; font-size: 12.5px; color: var(--txt-3);
+  cursor: pointer; display: flex; align-items: center; gap: 10px;
+  transition: all 0.15s;
+}
+.dd-item:hover { background: rgba(255,255,255,0.05); color: var(--txt-2); }
+.dd-item.danger { color: var(--rose); }
+.dd-item.danger:hover { background: var(--rose-bg); }
+.dd-sep { height: 1px; background: var(--border); }
+
+/* ══════════════════════════════════════════
+   LAYOUT
+══════════════════════════════════════════ */
+.layout {
+  display: flex;
+  margin-top: var(--topbar-h);
+  min-height: calc(100vh - var(--topbar-h));
+}
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--bg-2);
+  border-right: 1px solid var(--border);
+  position: sticky; top: var(--topbar-h);
+  height: calc(100vh - var(--topbar-h));
+  overflow-y: auto; overflow-x: hidden;
+  scrollbar-width: none; flex-shrink: 0;
+  display: flex; flex-direction: column; padding: 18px 0;
+}
+.sidebar::-webkit-scrollbar { display: none; }
+.sidebar-section { margin-bottom: 6px; }
+.sidebar-label {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--txt-3);
+  padding: 8px 20px 6px;
+}
+.sidebar-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 9px 20px; cursor: pointer; transition: all 0.18s;
+  font-size: 13px; font-weight: 500; color: var(--txt-3);
+  position: relative;
+}
+.sidebar-item:hover { background: rgba(255,255,255,0.04); color: var(--txt-2); }
+.sidebar-item.active { color: var(--accent-2); background: var(--accent-bg); font-weight: 600; }
+.sidebar-item.active::before {
+  content: ''; position: absolute; left: 0; top: 6px; bottom: 6px;
+  width: 3px; background: var(--accent); border-radius: 0 2px 2px 0;
+}
+.sidebar-icon { font-size: 15px; flex-shrink: 0; }
+.sidebar-count {
+  margin-left: auto; font-size: 10px;
+  background: rgba(255,255,255,0.08); color: var(--txt-3);
+  padding: 2px 7px; border-radius: 10px; font-weight: 600;
+}
+.sidebar-item.active .sidebar-count { background: var(--accent-bg); color: var(--accent-2); }
+.sidebar-divider { height: 1px; background: var(--border); margin: 10px 20px; }
+
+.streak-mini {
+  margin: 8px 12px;
+  background: linear-gradient(135deg, rgba(245,166,35,0.1), rgba(245,166,35,0.06));
+  border: 1px solid rgba(245,166,35,0.2);
+  border-radius: var(--r-md); padding: 10px 12px;
+  cursor: pointer; transition: all 0.2s;
+}
+.streak-mini:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.streak-mini-title { font-size: 11px; font-weight: 700; color: var(--amber); margin-bottom: 6px; }
+.streak-dots { display: flex; gap: 4px; }
+.s-dot2 {
+  width: 20px; height: 20px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 7px; font-weight: 700; color: white;
+}
+.s-dot2.done  { background: var(--amber); }
+.s-dot2.today { background: var(--rose); animation: todayPulse 2s ease infinite; }
+.s-dot2.empty { background: rgba(255,255,255,0.07); color: var(--txt-3); }
+@keyframes todayPulse{0%,100%{box-shadow:0 0 0 0 rgba(240,96,128,0.4)}50%{box-shadow:0 0 0 3px rgba(240,96,128,0)}}
+
+.main-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+.page { display: none; }
+.page.active { display: block; animation: fadeIn 0.22s ease; }
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ══════════════════════════════════════════
+   HOME PAGE
+══════════════════════════════════════════ */
+.hero-banner {
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  padding: 44px 48px 48px; position: relative; overflow: hidden;
+}
+.hero-banner::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 80% at 0% 50%, rgba(124,109,250,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 60% at 100% 20%, rgba(240,96,128,0.06) 0%, transparent 60%);
+}
+.hero-banner::after {
+  content: ''; position: absolute; right: -60px; top: -60px;
+  width: 300px; height: 300px; border-radius: 50%;
+  border: 1px solid rgba(124,109,250,0.1);
+  animation: ringRotate 30s linear infinite;
+}
+@keyframes ringRotate{to{transform:rotate(360deg)}}
+.hero-greeting {
+  font-size: 11px; font-weight: 600; color: var(--accent-2);
+  letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 10px; position: relative;
+}
+.hero-title {
+  font-family: var(--font-serif); font-size: 38px; font-weight: 700;
+  color: var(--txt); line-height: 1.15; margin-bottom: 8px; position: relative;
+}
+.hero-sub { font-size: 14px; color: var(--txt-3); margin-bottom: 28px; position: relative; }
+.hero-stats { display: flex; gap: 28px; position: relative; }
+.hs-item { text-align: left; }
+.hs-num { font-family: var(--font-serif); font-size: 28px; font-weight: 700; color: var(--txt); line-height: 1; }
+.hs-lbl { font-size: 10px; color: var(--txt-3); font-weight: 500; margin-top: 3px; }
+
+.content-area { padding: 32px 40px 48px; }
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.section-title { font-family: var(--font-serif); font-size: 20px; font-weight: 700; color: var(--txt); }
+.section-link {
+  font-size: 12px; color: var(--accent-2); font-weight: 600; cursor: pointer;
+  padding: 6px 14px; border-radius: var(--r-sm); transition: background 0.2s;
+}
+.section-link:hover { background: var(--accent-bg); }
+
+.continue-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px,1fr)); gap: 12px; margin-bottom: 40px; }
+.bcard {
+  background: var(--bg-3); border-radius: var(--r-lg); border: 1px solid var(--border);
+  padding: 16px; display: flex; align-items: center; gap: 16px;
+  cursor: pointer; transition: all 0.22s;
+}
+.bcard:hover {
+  border-color: rgba(124,109,250,0.3); background: var(--bg-4);
+  box-shadow: 0 4px 20px rgba(124,109,250,0.1); transform: translateY(-2px);
+}
+.bcover {
+  width: 58px; height: 78px; border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center; font-size: 30px;
+  flex-shrink: 0; box-shadow: 4px 4px 16px rgba(0,0,0,0.4);
+}
+.binfo { flex: 1; min-width: 0; }
+.bname {
+  font-family: var(--font-serif); font-size: 15px; font-weight: 600;
+  color: var(--txt); margin-bottom: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bmeta { font-size: 11px; color: var(--txt-3); margin-bottom: 8px; }
+.bprog-bar { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; margin-bottom: 4px; }
+.bprog-fill { height: 100%; background: linear-gradient(to right, var(--accent), var(--rose)); border-radius: 2px; transition: width 0.8s; }
+.bprog-label { font-size: 10px; color: var(--txt-3); }
+.baction {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--accent); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; flex-shrink: 0;
+  box-shadow: 0 3px 12px rgba(124,109,250,0.4); transition: all 0.2s;
+}
+.baction:hover { background: var(--accent-2); transform: scale(1.1); }
+
+.updates-row {
+  display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none;
+  padding-bottom: 8px; margin-bottom: 40px;
+}
+.updates-row::-webkit-scrollbar { display: none; }
+.story-card {
+  flex-shrink: 0; width: 124px;
+  background: var(--bg-3); border-radius: var(--r-lg); border: 1px solid var(--border);
+  padding: 14px 12px 12px; text-align: center; cursor: pointer;
+  transition: all 0.22s; position: relative; overflow: hidden;
+}
+.story-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: rgba(124,109,250,0.3); }
+.story-card.has-update { border-color: rgba(240,96,128,0.3); }
+.story-card.has-update::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(to right,var(--rose),var(--amber)); }
+.sc-cover { width: 54px; height: 54px; border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 26px; position: relative; }
+.sc-new-ring { position:absolute; inset:-3px; border-radius:50%; background:conic-gradient(var(--rose) 0deg,var(--amber) 180deg,var(--rose) 360deg); animation:ringSpin 4s linear infinite; z-index:-1; }
+@keyframes ringSpin{to{transform:rotate(360deg)}}
+.sc-inner { position:relative; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:26px; border:2px solid var(--bg); }
+.sc-new-dot { width:10px; height:10px; background:var(--rose); border-radius:50%; position:absolute; bottom:-1px; right:-1px; border:2px solid var(--bg-3); animation:dotPulse 2s infinite; }
+.sc-title { font-size:11px; font-weight:600; color:var(--txt); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
+.sc-ep { font-size:10px; color:var(--txt-3); }
+.sc-new-badge { position:absolute; top:8px; right:8px; background:var(--rose); color:white; font-size:8px; font-weight:700; padding:2px 6px; border-radius:6px; }
+
+.premium-banner {
+  background: linear-gradient(120deg, var(--bg-4) 0%, rgba(124,109,250,0.15) 100%);
+  border: 1px solid rgba(124,109,250,0.2);
+  border-radius: var(--r-lg); padding: 22px 26px;
+  display: flex; align-items: center; gap: 18px;
+  position: relative; overflow: hidden; cursor: pointer; transition: all 0.22s; margin-bottom: 40px;
+}
+.premium-banner:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(124,109,250,0.2); }
+.pb-icon { font-size: 42px; flex-shrink: 0; }
+.pb-text { flex: 1; }
+.pb-text b { font-size: 16px; font-weight: 700; color: var(--txt); display: block; margin-bottom: 4px; }
+.pb-text span { font-size: 13px; color: var(--txt-2); }
+.pb-btn {
+  background: var(--accent); color: white; border: none;
+  padding: 10px 22px; border-radius: 20px; font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: var(--font-sans); flex-shrink: 0;
+  transition: all 0.2s; box-shadow: 0 3px 14px rgba(124,109,250,0.4);
+}
+.pb-btn:hover { background: var(--accent-2); }
+.pb-close { position:absolute; top:12px; right:14px; color:var(--txt-3); font-size:16px; cursor:pointer; z-index:1; transition:color 0.2s; }
+.pb-close:hover { color: var(--txt); }
+.pb-tag { position:absolute; top:12px; right:36px; font-size:9px; background:rgba(255,255,255,0.07); color:var(--txt-3); padding:2px 8px; border-radius:6px; }
+
+/* Search Page */
+.search-page-content{padding:40px 48px 48px;}
+.page-heading{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:700;font-style:italic;margin-bottom:24px;color:var(--ink);}
+.search-bar-lg{position:relative;margin-bottom:20px;}
+.search-input-lg{width:100%;max-width:600px;background:var(--paper);border:2px solid var(--cream);border-radius:var(--r-lg);padding:14px 18px 14px 50px;font-size:15px;color:var(--ink);font-family:'DM Sans',sans-serif;outline:none;transition:all 0.2s;box-shadow:var(--shadow-xs);}
+.search-input-lg::placeholder{color:var(--ash);}
+.search-input-lg:focus{border-color:rgba(26,86,219,0.5);background:var(--blue-lt);box-shadow:0 0 0 4px rgba(26,86,219,0.08);}
+.search-icon-lg{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:var(--ash);font-size:18px;pointer-events:none;}
+.search-clear-lg{position:absolute;right:calc(100% - 600px + 16px);top:50%;transform:translateY(-50%);color:var(--ash);font-size:16px;cursor:pointer;padding:4px;border-radius:50%;display:none;transition:all 0.2s;}
+.search-clear-lg:hover{background:var(--cream);color:var(--ink);}
+.filter-tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;}
+.f-tag{padding:7px 18px;border-radius:24px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid var(--cream);background:var(--paper);color:var(--ink-soft);transition:all 0.18s;}
+.f-tag.active{background:var(--blue);border-color:var(--blue);color:white;box-shadow:0 3px 10px rgba(26,86,219,0.3);}
+.f-tag:not(.active):hover{border-color:rgba(26,86,219,0.4);color:var(--blue);}
+.results-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+.result-card-w{background:var(--paper);border:1px solid var(--cream);border-radius:var(--r-lg);padding:16px;display:flex;gap:14px;align-items:center;cursor:pointer;transition:all 0.22s;}
+.result-card-w:hover{border-color:rgba(26,86,219,0.35);background:var(--blue-lt);transform:translateY(-2px);box-shadow:var(--shadow-sm);}
+.rc-cover{width:52px;height:70px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0;box-shadow:3px 3px 12px rgba(14,14,24,0.18);}
+.rc-info{flex:1;min-width:0;}
+.rc-title{font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:600;color:var(--ink);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rc-meta{font-size:10.5px;color:var(--ash);margin-bottom:7px;}
+.rc-tags{display:flex;gap:5px;flex-wrap:wrap;}
+.r-tag{font-size:9.5px;padding:3px 8px;border-radius:6px;font-weight:500;}
+.r-tag.genre{background:var(--blue-lt);color:var(--blue);}
+.r-tag.status.done{background:var(--jade-lt);color:var(--jade);}
+.r-tag.status.ongoing{background:var(--amber-lt);color:var(--amber);}
+.r-tag.new{background:var(--rose-lt);color:var(--rose);}
+.rc-heart{font-size:22px;cursor:pointer;transition:transform 0.2s;flex-shrink:0;}
+.rc-heart:hover{transform:scale(1.3)rotate(-10deg);}
+.no-results{text-align:center;padding:60px 20px;color:var(--ash);}
+.no-results .nr-icon{font-size:56px;display:block;margin-bottom:18px;}
+.no-results p{font-size:14px;line-height:1.7;}
+
+/* ═══════════════════════════════════════════
+   SHELF PAGE
+═══════════════════════════════════════════ */
+.shelf-page-content { padding: 36px 44px 48px; }
+.shelf-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
+.sync-btn {
+  display:inline-flex; align-items:center; gap:8px;
+  background: var(--accent); color:white; padding:9px 20px; border-radius:24px;
+  font-size:12.5px; font-weight:600; cursor:pointer; border:none;
+  font-family:var(--font-sans); transition:all 0.22s;
+  box-shadow: 0 3px 14px rgba(124,109,250,0.35);
+}
+.sync-btn:hover { background:var(--accent-2); transform:translateY(-1px); }
+.sync-btn.syncing .si { animation:spin 0.8s linear infinite; display:inline-block; }
+.sync-time { font-size:10px; color:var(--txt-3); margin-top:5px; font-weight:500; text-align:right; }
+
+.hist-search-wrap { position:relative; margin-bottom:28px; max-width:460px; }
+.hist-search-input {
+  width:100%; background:var(--bg-3); border:1.5px solid var(--border);
+  border-radius:var(--r-md); padding:11px 14px 11px 42px;
+  font-size:13px; color:var(--txt); font-family:var(--font-sans); outline:none; transition:all 0.2s;
+}
+.hist-search-input:focus { border-color:rgba(124,109,250,0.5); background:var(--bg-4); }
+.hist-search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--txt-3); font-size:14px; pointer-events:none; }
+
+.grp-label {
+  font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase;
+  color:var(--txt-3); margin-bottom:12px; margin-top:24px;
+  display:flex; align-items:center; gap:10px;
+}
+.grp-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+.history-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:10px; margin-bottom:4px; }
+.hist-item-w {
+  background:var(--bg-3); border-radius:var(--r-md); border:1px solid var(--border);
+  padding:13px 15px; display:flex; gap:13px; align-items:center;
+  cursor:pointer; transition:all 0.22s; position:relative; overflow:hidden;
+}
+.hist-item-w:hover { border-color:rgba(124,109,250,0.3); background:var(--bg-4); transform:translateX(3px); }
+.hist-cover-w { width:44px; height:58px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; box-shadow:2px 3px 10px rgba(0,0,0,0.4); }
+.hist-info-w { flex:1; min-width:0; }
+.hist-title-w { font-family:var(--font-serif); font-size:14px; font-weight:600; color:var(--txt); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hist-ep-w { font-size:11px; color:var(--txt-2); margin-bottom:2px; }
+.hist-time-w { font-size:10px; color:var(--txt-3); }
+.hist-pct-wrap { display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex-shrink:0; }
+.hist-pct { font-size:13px; color:var(--accent-2); font-weight:700; }
+.hist-pct-bar { width:34px; height:3px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden; }
+.hist-pct-fill { height:100%; background:linear-gradient(to right,var(--accent),var(--rose)); border-radius:2px; }
+
+/* ═══════════════════════════════════════════
+   PROFILE PAGE
+═══════════════════════════════════════════ */
+.profile-content { padding: 36px 44px 48px; }
+.profile-top {
+  display:flex; align-items:flex-start; gap:28px; margin-bottom:32px;
+  background:var(--bg-3); border-radius:var(--r-lg); border:1px solid var(--border); padding:26px;
+}
+.profile-avatar-lg {
+  width:76px; height:76px; border-radius:50%;
+  background:linear-gradient(135deg, var(--accent), #9B8DFF);
+  display:flex; align-items:center; justify-content:center; font-size:36px;
+  border:2px solid rgba(124,109,250,0.3);
+  box-shadow:0 4px 20px rgba(124,109,250,0.3); flex-shrink:0;
+  cursor:pointer; transition:all 0.25s; position:relative;
+}
+.profile-avatar-lg:hover { transform:scale(1.08) rotate(5deg); }
+.avatar-edit-badge { position:absolute; bottom:-3px; right:-3px; width:20px; height:20px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; border:2px solid var(--bg); }
+.profile-meta { flex:1; }
+.profile-name { font-family:var(--font-serif); font-size:26px; font-weight:700; color:var(--txt); margin-bottom:4px; }
+.profile-sub { font-size:12px; color:var(--txt-3); margin-bottom:18px; }
+.stats-bar { display:flex; gap:0; border:1px solid var(--border); border-radius:var(--r-md); overflow:hidden; }
+.stat-box-w { flex:1; padding:14px 12px; text-align:center; border-right:1px solid var(--border); cursor:pointer; transition:background 0.2s; }
+.stat-box-w:last-child { border-right:none; }
+.stat-box-w:hover { background:var(--accent-bg); }
+.stat-num { font-family:var(--font-serif); font-size:26px; font-weight:700; color:var(--accent-2); display:block; line-height:1; margin-bottom:3px; }
+.stat-lbl { font-size:9px; color:var(--txt-3); font-weight:600; letter-spacing:0.5px; text-transform:uppercase; }
+
+.streak-card-w {
+  background:linear-gradient(135deg,rgba(245,166,35,0.1),rgba(245,166,35,0.05));
+  border:1px solid rgba(245,166,35,0.2); border-radius:var(--r-lg);
+  padding:20px 24px; display:flex; align-items:center; gap:18px; margin-bottom:32px;
+}
+.streak-icon-lg { font-size:34px; flex-shrink:0; }
+.streak-info-w .streak-title-w { font-size:15px; font-weight:700; color:var(--amber); margin-bottom:3px; }
+.streak-info-w .streak-sub-w { font-size:12px; color:rgba(245,166,35,0.7); margin-bottom:10px; }
+.streak-dots-w { display:flex; gap:8px; }
+.sd-w { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:8.5px; font-weight:700; color:white; }
+.sd-w.done { background:var(--amber); }
+.sd-w.today { background:var(--rose); animation:todayPulse 2s ease infinite; }
+.sd-w.empty { background:rgba(255,255,255,0.07); color:var(--txt-3); }
+
+.hearts-section-title { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.hst { font-family:var(--font-serif); font-size:20px; font-weight:700; color:var(--txt); }
+.filter-chips-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+.chip-w { padding:6px 16px; border-radius:20px; font-size:11.5px; font-weight:500; cursor:pointer; border:1.5px solid var(--border); background:rgba(255,255,255,0.04); color:var(--txt-3); transition:all 0.18s; }
+.chip-w.active { background:var(--accent); border-color:var(--accent); color:white; box-shadow:0 2px 12px rgba(124,109,250,0.35); }
+.chip-w:not(.active):hover { border-color:rgba(124,109,250,0.4); color:var(--accent-2); }
+
+.hearts-grid-w { display:grid; grid-template-columns:repeat(auto-fill,minmax(156px,1fr)); gap:12px; }
+.h-card-w { background:var(--bg-3); border-radius:var(--r-lg); border:1px solid var(--border); overflow:hidden; cursor:pointer; transition:all 0.25s; }
+.h-card-w:hover { border-color:rgba(240,96,128,0.3); transform:translateY(-4px); box-shadow:0 10px 28px rgba(240,96,128,0.1); }
+.h-cover-w { height:96px; display:flex; align-items:center; justify-content:center; font-size:40px; position:relative; }
+.h-heart-btn { position:absolute; top:8px; right:8px; width:26px; height:26px; background:rgba(240,96,128,0.85); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer; transition:all 0.2s; box-shadow:0 2px 8px rgba(240,96,128,0.4); }
+.h-heart-btn:hover { transform:scale(1.2); background:var(--rose); }
+.sbadge-w { position:absolute; bottom:6px; left:6px; font-size:9px; padding:2px 8px; border-radius:6px; font-weight:600; }
+.sbadge-w.done { background:var(--jade-bg); color:var(--jade); }
+.sbadge-w.ongoing { background:var(--amber-bg); color:var(--amber); }
+.h-info-w { padding:10px 12px 12px; }
+.h-name-w { font-family:var(--font-serif); font-size:13.5px; font-weight:600; color:var(--txt); margin-bottom:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.h-meta-w { font-size:10px; color:var(--txt-3); }
+.empty-state { text-align:center; padding:60px 24px; color:var(--txt-3); grid-column:span 3; }
+.empty-state .es-icon { font-size:52px; display:block; margin-bottom:16px; }
+.empty-state p { font-size:14px; line-height:1.7; }
+
+/* ═══════════════════════════════════════════
+   READER
+═══════════════════════════════════════════ */
+.reader-overlay {
+  display:none; position:fixed; inset:0; z-index:200;
+  background:var(--bg); flex-direction:column;
+  animation:slideUp 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.reader-overlay.active { display:flex; }
+@keyframes slideUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+
+.reader-topbar {
+  height:var(--topbar-h); padding:0 30px;
+  display:flex; align-items:center; gap:14px;
+  border-bottom:1px solid var(--border);
+  background:rgba(10,12,20,0.92); backdrop-filter:blur(12px); flex-shrink:0;
+}
+.reader-back {
+  cursor:pointer; padding:7px 12px; border-radius:var(--r-sm);
+  transition:all 0.2s; border:1px solid var(--border);
+  background:rgba(255,255,255,0.05); font-size:13px; font-weight:600;
+  display:flex; align-items:center; gap:6px; color:var(--txt-2);
+}
+.reader-back:hover { background:var(--accent-bg); border-color:rgba(124,109,250,0.3); color:var(--accent-2); }
+.reader-title-info { flex:1; }
+.reader-book-name { font-family:var(--font-serif); font-size:17px; font-weight:700; color:var(--txt); }
+.reader-ch-name { font-size:11px; color:var(--txt-3); }
+.reader-controls { display:flex; gap:8px; }
+.rctrl {
+  padding:7px 14px; border-radius:var(--r-sm); border:1px solid var(--border);
+  background:rgba(255,255,255,0.05); font-size:12.5px; font-weight:500;
+  cursor:pointer; font-family:var(--font-sans); transition:all 0.2s; color:var(--txt-2);
+}
+.rctrl:hover { background:var(--accent-bg); border-color:rgba(124,109,250,0.3); color:var(--accent-2); }
+
+.reader-progress-bar { height:2px; background:rgba(255,255,255,0.07); flex-shrink:0; }
+.reader-progress-fill { height:100%; background:linear-gradient(to right,var(--accent),var(--rose)); width:0%; transition:width 0.3s; }
+
+.font-panel-w {
+  background:var(--bg-2); border-bottom:1px solid var(--border);
+  padding:10px 30px; display:none; align-items:center; gap:12px; flex-shrink:0;
+}
+.font-panel-w.open { display:flex; animation:slideDown 0.2s ease; }
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.fp-label { font-size:11px; color:var(--txt-3); font-weight:600; }
+.fp-btn-w {
+  padding:5px 12px; border-radius:8px; border:1px solid var(--border);
+  background:rgba(255,255,255,0.04); cursor:pointer; font-size:12px; font-weight:600;
+  font-family:var(--font-sans); transition:all 0.18s; color:var(--txt-2);
+}
+.fp-btn-w.active { background:var(--accent); color:white; border-color:var(--accent); }
+.fp-sep { width:1px; height:22px; background:var(--border); }
+.fp-theme-w { width:22px; height:22px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:border-color 0.2s; }
+.fp-theme-w.active { border-color:var(--accent); }
+
+.reader-main { flex:1; overflow-y:auto; overflow-x:hidden; display:flex; justify-content:center; }
+.reader-main::-webkit-scrollbar { width:5px; }
+.reader-main::-webkit-scrollbar-thumb { background:var(--border-2); border-radius:3px; }
+
+.reader-text {
+  max-width:660px; width:100%; padding:48px;
+  font-family:'Playfair Display', Georgia, serif;
+  font-size:18px; line-height:2.1; color:var(--txt-2);
+  letter-spacing:0.01em;
+}
+.reader-text.fs-sm{font-size:15px;} .reader-text.fs-md{font-size:18px;} .reader-text.fs-lg{font-size:21px;}
+.reader-text.theme-sepia { background:#FAF0D7; color:#5C4A1E; }
+.reader-text.theme-dark  { background:#111120; color:#B8B0A0; }
+.reader-ep-big {
+  font-family:var(--font-serif); font-size:24px; font-weight:700;
+  color:var(--accent-2); font-style:italic; margin-bottom:28px;
+  padding-bottom:20px; border-bottom:1px solid var(--border);
+}
+.reader-bottombar {
+  border-top:1px solid var(--border); background:rgba(10,12,20,0.92);
+  backdrop-filter:blur(12px); padding:13px 30px;
+  display:flex; justify-content:center; align-items:center; gap:12px; flex-shrink:0;
+}
+.rbtn {
+  padding:9px 22px; border-radius:var(--r-sm); font-size:13px; font-weight:600;
+  cursor:pointer; font-family:var(--font-sans); border:1.5px solid var(--border);
+  background:rgba(255,255,255,0.05); color:var(--txt-3); transition:all 0.2s;
+}
+.rbtn:hover { border-color:rgba(124,109,250,0.4); color:var(--accent-2); }
+.rbtn.primary { background:var(--accent); color:white; border-color:var(--accent); box-shadow:0 3px 14px rgba(124,109,250,0.4); }
+.rbtn.primary:hover { background:var(--accent-2); }
+
+/* ═══════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════ */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(12px);
+  display:flex; align-items:center; justify-content:center; z-index:300;
+  opacity:0; pointer-events:none; transition:opacity 0.25s;
+}
+.modal-overlay.open { opacity:1; pointer-events:all; }
+.modal-box {
+  background:var(--bg-3); border:1px solid var(--border-2);
+  border-radius:var(--r-xl); width:100%; max-width:460px; padding:30px;
+  transform:scale(0.95) translateY(10px);
+  transition:transform 0.3s cubic-bezier(0.34,1.2,0.64,1);
+  max-height:82vh; overflow-y:auto; position:relative;
+  box-shadow: var(--shadow-lg);
+}
+.modal-overlay.open .modal-box { transform:scale(1) translateY(0); }
+.modal-close { position:absolute; top:14px; right:14px; width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.07); display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; transition:all 0.2s; color:var(--txt-3); }
+.modal-close:hover { background:var(--rose-bg); color:var(--rose); }
+.modal-cover { font-size:66px; text-align:center; margin-bottom:12px; }
+.modal-title { font-family:var(--font-serif); font-size:24px; font-weight:700; text-align:center; margin-bottom:4px; color:var(--txt); }
+.modal-meta { font-size:12px; color:var(--txt-3); text-align:center; margin-bottom:14px; }
+.modal-tags { display:flex; justify-content:center; gap:8px; margin-bottom:16px; }
+.modal-desc { font-size:13px; color:var(--txt-2); line-height:1.8; margin-bottom:24px; border-top:1px solid var(--border); padding-top:18px; }
+.modal-actions { display:flex; gap:12px; }
+.btn-prim { flex:1; background:var(--accent); color:white; border:none; border-radius:var(--r-sm); padding:13px; font-size:14px; font-weight:600; cursor:pointer; font-family:var(--font-sans); transition:all 0.2s; box-shadow:0 3px 14px rgba(124,109,250,0.35); }
+.btn-prim:hover { background:var(--accent-2); transform:translateY(-1px); }
+.btn-sec { flex:0 0 50px; background:var(--rose-bg); color:var(--rose); border:1.5px solid rgba(240,96,128,0.2); border-radius:var(--r-sm); padding:13px; font-size:20px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; }
+.btn-sec:hover { background:var(--rose); color:white; border-color:var(--rose); }
+
+/* ═══════════════════════════════════════════
+   TOASTS
+═══════════════════════════════════════════ */
+.toast {
+  position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(12px);
+  background:var(--bg-4); color:var(--txt); padding:10px 22px; border-radius:28px;
+  font-size:13px; font-weight:500; opacity:0; transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  z-index:400; white-space:nowrap; pointer-events:none;
+  box-shadow:var(--shadow-md); border:1px solid var(--border-2);
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.undo-toast {
+  position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(12px);
+  background:var(--bg-4); color:var(--txt); padding:10px 10px 10px 20px; border-radius:28px;
+  font-size:13px; font-weight:500; opacity:0; transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  z-index:401; pointer-events:none; box-shadow:var(--shadow-md);
+  border:1px solid var(--border-2); display:flex; align-items:center; gap:14px; min-width:230px;
+}
+.undo-toast.show { opacity:1; transform:translateX(-50%) translateY(0); pointer-events:all; }
+.undo-btn { background:var(--rose); color:white; border:none; border-radius:18px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--font-sans); }
+.undo-btn:hover { background:#d04060; }
+
+/* ═══════════════════════════════════════════
+   COVER COLORS (DARK THEMED)
+═══════════════════════════════════════════ */
+.c1{background:linear-gradient(145deg,#0A0A1A,#1A1A3A)}
+.c2{background:linear-gradient(145deg,#0D1F4A,#1A3B8A)}
+.c3{background:linear-gradient(145deg,#2A0A00,#6B2800)}
+.c4{background:linear-gradient(145deg,#052A15,#0A5028)}
+.c5{background:linear-gradient(145deg,#1A0030,#4A0070)}
+.c6{background:linear-gradient(145deg,#051530,#0D3060)}
+.c7{background:linear-gradient(145deg,#180030,#3A0060)}
+.c8{background:linear-gradient(145deg,#280010,#5A1030)}
+
+/* ═══════════════════════════════════════════
+   NOTIF PANEL
+═══════════════════════════════════════════ */
+.notif-panel {
+  position:absolute; top:calc(var(--topbar-h) + 8px); right:16px; width:310px;
+  background:var(--bg-3); border-radius:var(--r-lg); border:1px solid var(--border-2);
+  box-shadow:var(--shadow-md); z-index:150; overflow:hidden;
+  transform:scale(0.94) translateY(-10px); opacity:0; pointer-events:none;
+  transition:all 0.22s cubic-bezier(0.34,1.2,0.64,1); transform-origin:top right;
+}
+.notif-panel.open { transform:scale(1) translateY(0); opacity:1; pointer-events:all; }
+.notif-header { padding:13px 17px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+.notif-header-txt { font-size:13.5px; font-weight:700; color:var(--txt); }
+.notif-clear { font-size:11px; color:var(--accent-2); cursor:pointer; font-weight:600; padding:4px 10px; border-radius:8px; transition:background 0.2s; }
+.notif-clear:hover { background:var(--accent-bg); }
+.notif-item { padding:11px 17px; border-bottom:1px solid rgba(255,255,255,0.04); display:flex; gap:11px; align-items:flex-start; cursor:pointer; transition:background 0.2s; }
+.notif-item:hover { background:rgba(255,255,255,0.04); }
+.notif-item:last-child { border-bottom:none; }
+.ni-icon { font-size:20px; flex-shrink:0; }
+.ni-title { font-size:12px; font-weight:600; margin-bottom:2px; color:var(--txt); }
+.ni-sub { font-size:11px; color:var(--txt-3); }
+.ni-unread { width:7px; height:7px; background:var(--rose); border-radius:50%; flex-shrink:0; margin-top:6px; }
+
+.info-tip {
+  background:var(--accent-bg); border:1px solid rgba(124,109,250,0.2);
+  border-radius:var(--r-md); padding:12px 16px;
+  display:flex; gap:12px; align-items:flex-start; margin-bottom:20px;
+}
+.it-icon { font-size:15px; flex-shrink:0; }
+.it-text { font-size:12px; color:var(--accent-2); line-height:1.6; }
+.it-text b { font-weight:700; }
+
+/* ═══════════════════════════════════════════
+   WRITER STUDIO
+═══════════════════════════════════════════ */
+.writer-hero {
+  background: var(--bg-2); border-bottom: 1px solid var(--border);
+  padding: 40px 48px 44px; position: relative; overflow: hidden;
+}
+.writer-hero::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 50% 80% at 0% 50%, rgba(155,141,255,0.1) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 60% at 100% 30%, rgba(240,96,128,0.06) 0%, transparent 60%);
+}
+.writer-content { padding: 26px 38px 48px; }
+.writer-topbar {
+  display:flex; align-items:center; gap:12px; margin-bottom:22px;
+  background:var(--bg-3); border:1px solid var(--border); border-radius:var(--r-md); padding:11px 15px;
+}
+.w-label { font-size:12px; font-weight:600; color:var(--txt-3); white-space:nowrap; }
+.w-select {
+  flex:1; max-width:270px; border:1.5px solid var(--border); border-radius:8px;
+  padding:7px 12px; font-size:13px; font-family:var(--font-sans);
+  color:var(--txt); background:var(--bg-4); outline:none; cursor:pointer;
+}
+.w-select:focus { border-color:rgba(124,109,250,0.5); }
+.w-btn-primary {
+  padding:8px 18px; background:var(--accent); color:white; border:none;
+  border-radius:20px; font-size:12.5px; font-weight:600;
+  cursor:pointer; font-family:var(--font-sans); transition:all 0.2s;
+  box-shadow:0 3px 12px rgba(124,109,250,0.35);
+}
+.w-btn-primary:hover { background:var(--accent-2); transform:translateY(-1px); }
+.w-btn-secondary {
+  padding:8px 16px; background:rgba(255,255,255,0.05); color:var(--txt-3);
+  border:1.5px solid var(--border); border-radius:20px; font-size:12.5px;
+  font-weight:600; cursor:pointer; font-family:var(--font-sans); transition:all 0.2s;
+}
+.w-btn-secondary:hover { border-color:rgba(124,109,250,0.4); color:var(--accent-2); }
+.writer-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.w-card { background:var(--bg-3); border:1px solid var(--border); border-radius:var(--r-lg); padding:18px; }
+.w-card-header { display:flex; align-items:center; gap:10px; margin-bottom:15px; padding-bottom:13px; border-bottom:1px solid var(--border); }
+.w-card-icon { font-size:18px; }
+.w-card-title { font-family:var(--font-serif); font-size:17px; font-weight:700; color:var(--txt); flex:1; }
+.w-add-btn {
+  padding:5px 13px; background:var(--accent-bg); color:var(--accent-2);
+  border:1px solid rgba(124,109,250,0.2); border-radius:20px; font-size:11px;
+  font-weight:600; cursor:pointer; font-family:var(--font-sans); transition:all 0.2s;
+}
+.w-add-btn:hover { background:var(--accent); color:white; }
+
+.char-table-wrap { overflow-x:auto; }
+.char-table { width:100%; border-collapse:collapse; font-size:12.5px; }
+.char-table th {
+  background:var(--bg-4); padding:9px 11px; text-align:left;
+  font-size:9.5px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+  color:var(--txt-3); border-bottom:1px solid var(--border); white-space:nowrap;
+}
+.char-table td { padding:6px 4px; border-bottom:1px solid rgba(255,255,255,0.04); vertical-align:top; }
+.char-table tr:last-child td { border-bottom:none; }
+.char-table tr:hover td { background:rgba(124,109,250,0.05); }
+.ct-input {
+  width:100%; border:1px solid transparent; border-radius:6px;
+  padding:5px 8px; font-size:12px; font-family:var(--font-sans);
+  color:var(--txt); background:transparent; outline:none; transition:all 0.18s; min-width:78px;
+}
+.ct-input:focus { border-color:rgba(124,109,250,0.4); background:var(--accent-bg); }
+.ct-select {
+  border:1px solid transparent; border-radius:6px; padding:5px 8px;
+  font-size:11px; font-family:var(--font-sans); color:var(--txt-2);
+  background:transparent; outline:none; cursor:pointer; transition:all 0.18s;
+}
+.ct-select:focus { border-color:rgba(124,109,250,0.4); background:var(--accent-bg); }
+.ct-del-btn { background:none; border:none; color:var(--txt-3); cursor:pointer; font-size:13px; padding:4px 6px; border-radius:6px; transition:all 0.18s; }
+.ct-del-btn:hover { background:var(--rose-bg); color:var(--rose); }
+
+.struct-list { display:flex; flex-direction:column; gap:13px; }
+.struct-item { display:flex; gap:11px; align-items:flex-start; }
+.struct-badge { flex-shrink:0; padding:3px 9px; border-radius:8px; font-size:9px; font-weight:700; letter-spacing:0.5px; margin-top:6px; white-space:nowrap; }
+.struct-badge.hook       { background:var(--accent-bg); color:var(--accent-2); }
+.struct-badge.inciting   { background:var(--amber-bg); color:var(--amber); }
+.struct-badge.climax     { background:var(--rose-bg); color:var(--rose); }
+.struct-badge.resolution { background:var(--jade-bg); color:var(--jade); }
+.struct-body { flex:1; }
+.struct-label { font-size:10.5px; font-weight:600; color:var(--txt-3); margin-bottom:5px; }
+.w-textarea {
+  width:100%; border:1.5px solid var(--border); border-radius:var(--r-sm);
+  padding:9px 12px; font-size:12.5px; font-family:var(--font-sans);
+  color:var(--txt); background:var(--bg-4); outline:none;
+  resize:vertical; min-height:62px; line-height:1.6; transition:all 0.2s;
+}
+.w-textarea:focus { border-color:rgba(124,109,250,0.4); background:rgba(124,109,250,0.06); box-shadow:0 0 0 3px rgba(124,109,250,0.08); }
+.w-input {
+  width:100%; border:1.5px solid var(--border); border-radius:var(--r-sm);
+  padding:9px 12px; font-size:12.5px; font-family:var(--font-sans);
+  color:var(--txt); background:var(--bg-4); outline:none; transition:all 0.2s; margin-bottom:2px;
+}
+.w-input:focus { border-color:rgba(124,109,250,0.4); background:rgba(124,109,250,0.06); }
+.w-field-label { font-size:10.5px; font-weight:600; color:var(--txt-3); margin-bottom:6px; }
+.setting-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.theme-rows { display:flex; flex-direction:column; gap:13px; }
+.genre-chip {
+  display:inline-block; padding:5px 13px; border-radius:18px; font-size:11px;
+  font-weight:500; cursor:pointer; border:1.5px solid var(--border);
+  color:var(--txt-3); background:rgba(255,255,255,0.04);
+  transition:all 0.18s; user-select:none;
+}
+.genre-chip.active { background:var(--accent); border-color:var(--accent); color:white; box-shadow:0 2px 10px rgba(124,109,250,0.35); }
+.genre-chip:not(.active):hover { border-color:rgba(124,109,250,0.4); color:var(--accent-2); }
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════ */
+@media(max-width:900px){
+  .sidebar { display:none; }
+  .content-area,.search-page-content,.shelf-page-content,.profile-content,.writer-content { padding:22px 22px 36px; }
+  .hero-banner,.writer-hero { padding:28px 22px 32px; }
+  .hero-title { font-size:26px; }
+  .results-grid,.continue-grid { grid-template-columns:1fr; }
+  .hearts-grid-w { grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); }
+  .reader-topbar,.reader-bottombar { padding:11px 14px; }
+  .reader-text { padding:24px 20px; }
+  .profile-top { flex-direction:column; }
+  .search-clear-lg { right:14px; }
+  .writer-grid { grid-template-columns:1fr; }
+  .setting-grid { grid-template-columns:1fr; }
+  .auth-card { padding:30px 22px 26px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     AUTH SCREEN
+══════════════════════════════════════════ -->
+<!-- AUTH SCREEN -->
+<div id="authScreen">
+  <div class="auth-floats">
+    <div class="auth-float">📚</div>
+    <div class="auth-float">✍️</div>
+    <div class="auth-float">📖</div>
+    <div class="auth-float">🌹</div>
+    <div class="auth-float">⚔️</div>
+    <div class="auth-float">🌙</div>
+  </div>
+  <div class="auth-card" id="authCard">
+    <div class="auth-logo">Lib<em>Hub</em></div>
+    <div class="auth-tagline">Your Personal Reading Universe</div>
+
+    <div class="auth-tabs" id="authTabs">
+      <div class="auth-tab active" onclick="switchTab('login')">Sign In</div>
+      <div class="auth-tab" onclick="switchTab('register')">Create Account</div>
+    </div>
+
+    <div class="auth-err" id="authErr"><span>⚠️</span><span id="authErrMsg"></span></div>
+    <div class="auth-ok"  id="authOk"><span>✅</span><span id="authOkMsg"></span></div>
+
+    <!-- LOGIN -->
+    <div class="auth-form active" id="formLogin">
+      <div class="auth-field">
+        <label class="auth-lbl">Email or Username</label>
+        <input class="auth-input" id="loginId" type="text" placeholder="email@example.com or username" autocomplete="username" oninput="clearBanners()">
+        <div class="field-err-msg" id="loginIdErr"></div>
+      </div>
+      <div class="auth-field">
+        <label class="auth-lbl">Password</label>
+        <div class="pw-wrap">
+          <input class="auth-input" id="loginPw" type="password" placeholder="Your password" autocomplete="current-password" oninput="clearBanners()" onkeydown="if(event.key==='Enter')doLogin()">
+          <span class="pw-toggle" onclick="togglePw('loginPw',this)">👁</span>
+        </div>
+        <div class="field-err-msg" id="loginPwErr"></div>
+      </div>
+      <div class="auth-row">
+        <div class="auth-remember" onclick="toggleRemember()">
+          <div class="auth-checkbox" id="rememberBox"></div>
+          <span>Remember me</span>
+        </div>
+        <span class="auth-forgot" onclick="switchTab('reset')">Forgot password?</span>
+      </div>
+      <button class="auth-submit" id="loginBtn" onclick="doLogin()">
+        <span class="btn-txt">Sign In →</span>
+        <div class="btn-spin"></div>
+      </button>
+      <div class="auth-div"><span>or</span></div>
+      <button class="auth-google" onclick="doGoogle()"><span style="font-size:17px">🌐</span> Continue with Google</button>
+    </div>
+
+    <!-- REGISTER -->
+    <div class="auth-form" id="formRegister">
+      <div class="auth-field">
+        <label class="auth-lbl">Username</label>
+        <input class="auth-input" id="regUser" type="text" placeholder="e.g. bookworm_alex" autocomplete="username" oninput="onUsernameInput(this.value)" maxlength="20">
+        <div class="user-check" id="userCheck"></div>
+        <div class="field-hint">Letters a–z, 0–9, underscore only (3–20 chars)</div>
+        <div class="field-err-msg" id="regUserErr"></div>
+      </div>
+      <div class="auth-field">
+        <label class="auth-lbl">Email</label>
+        <input class="auth-input" id="regEmail" type="email" placeholder="email@example.com" autocomplete="email" oninput="clearBanners()">
+        <div class="field-err-msg" id="regEmailErr"></div>
+      </div>
+      <div class="auth-field">
+        <label class="auth-lbl">Password</label>
+        <div class="pw-wrap">
+          <input class="auth-input" id="regPw" type="password" placeholder="At least 8 characters" autocomplete="new-password" oninput="onPwStrength(this.value);clearBanners()">
+          <span class="pw-toggle" onclick="togglePw('regPw',this)">👁</span>
+        </div>
+        <div class="pw-strength" id="pwStr">
+          <div class="pw-bars"><div class="pw-bar" id="pb1"></div><div class="pw-bar" id="pb2"></div><div class="pw-bar" id="pb3"></div><div class="pw-bar" id="pb4"></div></div>
+          <div class="pw-str-lbl" id="pwStrLbl"></div>
+        </div>
+        <div class="field-err-msg" id="regPwErr"></div>
+      </div>
+      <div class="auth-field">
+        <label class="auth-lbl">Confirm Password</label>
+        <div class="pw-wrap">
+          <input class="auth-input" id="regPw2" type="password" placeholder="Repeat your password" autocomplete="new-password" oninput="clearBanners()" onkeydown="if(event.key==='Enter')doRegister()">
+          <span class="pw-toggle" onclick="togglePw('regPw2',this)">👁</span>
+        </div>
+        <div class="field-err-msg" id="regPw2Err"></div>
+      </div>
+      <button class="auth-submit" id="regBtn" onclick="doRegister()">
+        <span class="btn-txt">Create Account →</span>
+        <div class="btn-spin"></div>
+      </button>
+      <div class="auth-div"><span>or</span></div>
+      <button class="auth-google" onclick="doGoogle()"><span style="font-size:17px">🌐</span> Continue with Google</button>
+      <div class="auth-terms">By signing up you agree to our <a>Terms of Service</a> and <a>Privacy Policy</a></div>
+    </div>
+
+    <!-- RESET -->
+    <div class="auth-form" id="formReset">
+      <div class="reset-back" onclick="switchTab('login')">← Back to sign in</div>
+      <div style="margin-bottom:20px">
+        <div style="font-family:var(--font-serif);font-size:22px;font-weight:700;color:var(--txt);margin-bottom:6px">Reset Password</div>
+        <div style="font-size:12px;color:var(--txt-3);line-height:1.7">Enter your email and we'll send you a reset link.</div>
+      </div>
+      <div class="auth-field">
+        <label class="auth-lbl">Email</label>
+        <input class="auth-input" id="resetEmail" type="email" placeholder="email@example.com" onkeydown="if(event.key==='Enter')doReset()">
+        <div class="field-err-msg" id="resetEmailErr"></div>
+      </div>
+      <button class="auth-submit" id="resetBtn" onclick="doReset()">
+        <span class="btn-txt">Send Reset Link →</span>
+        <div class="btn-spin"></div>
+      </button>
+    </div>
+
+    <!-- SUCCESS -->
+    <div class="auth-success" id="authSuccess">
+      <div class="suc-glow"><span class="suc-icon" id="sucIcon">✨</span></div>
+      <div class="suc-title" id="sucTitle">Welcome!</div>
+      <div class="suc-sub" id="sucSub">Signed in successfully</div>
+      <div class="suc-badges" id="sucBadges">
+        <div class="suc-badge">📚 89 books read</div>
+        <div class="suc-badge">🔥 7-day streak</div>
+        <div class="suc-badge">❤️ 6 favourites</div>
+      </div>
+      <div class="suc-bar-wrap"><div class="suc-bar" id="sucBar"></div></div>
+      <div class="suc-hint">Loading your library…</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="appContainer">
+  <!-- TOP NAV -->
+  <nav class="topnav">
+    <div class="logo" onclick="navigate('home')"><em>Lib</em>Hub</div>
+    <div class="nav-links">
+      <div class="nav-link active" id="navl-home"    onclick="navigate('home')">🏠 Home</div>
+      <div class="nav-link"        id="navl-search"  onclick="navigate('search')">🔍 Explore</div>
+      <div class="nav-link"        id="navl-shelf"   onclick="navigate('shelf')">📚 My Shelf</div>
+      <div class="nav-link"        id="navl-writer"  onclick="navigate('writer')">✍️ Studio</div>
+      <div class="nav-link"        id="navl-profile" onclick="navigate('profile')">👤 Profile</div>
+    </div>
+    <div class="nav-right">
+      <div class="srch-wrap-top">
+        <span class="srch-icon-top">🔍</span>
+        <input class="srch-input-top" id="topSearch" placeholder="Quick search…"
+          oninput="handleTopSearch(this.value)"
+          onkeydown="if(event.key==='Enter'){navigate('search');document.getElementById('searchInputMain').value=this.value;handleSearch(this.value);}">
+      </div>
+      <div class="nav-btn" onclick="toggleNotif()" id="notifBtn">🔔<div class="notif-dot" id="notifDot"></div></div>
+      <div class="user-pill" id="userPill" onclick="toggleDD()">
+        <div class="user-pill-av" id="navAv">🦋</div>
+        <span class="user-pill-name" id="navName">Loading…</span>
+        <div class="user-dd" id="userDD">
+          <div class="dd-head">
+            <div class="dd-name" id="ddName">–</div>
+            <div class="dd-email" id="ddEmail">–</div>
+          </div>
+          <div class="dd-item" onclick="navigate('profile');closeDD()">👤 My Profile</div>
+          <div class="dd-item" onclick="navigate('shelf');closeDD()">📚 Reading History</div>
+          <div class="dd-item" onclick="showToast('⚙️ Settings — coming soon!')">⚙️ Settings</div>
+          <div class="dd-sep"></div>
+          <div class="dd-item danger" onclick="doLogout()">🚪 Sign Out</div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- NOTIF PANEL -->
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-header">
+      <span class="notif-header-txt">Notifications</span>
+      <span class="notif-clear" onclick="clearNotifs()">Clear all</span>
+    </div>
+    <div id="notifList"></div>
+  </div>
+
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Navigation</div>
+        <div class="sidebar-item active" id="side-home"    onclick="navigate('home')"><span class="sidebar-icon">🏠</span>Home<span class="sidebar-count" id="sideNewCount">3 new</span></div>
+        <div class="sidebar-item"        id="side-search"  onclick="navigate('search')"><span class="sidebar-icon">🔍</span>Explore</div>
+        <div class="sidebar-item"        id="side-shelf"   onclick="navigate('shelf')"><span class="sidebar-icon">📚</span>Reading History<span class="sidebar-count">6</span></div>
+        <div class="sidebar-item"        id="side-writer"  onclick="navigate('writer')"><span class="sidebar-icon">✍️</span>Writer Studio</div>
+        <div class="sidebar-item"        id="side-profile" onclick="navigate('profile')"><span class="sidebar-icon">👤</span>Profile</div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">❤️ Favourites Updates</div>
+        <div id="sidebarUpdates"></div>
+        <div id="sidebarNoUpdates" style="display:none;padding:8px 20px;font-size:11px;color:var(--txt-3);line-height:1.5">Like a novel to get updates here</div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="streak-mini" onclick="navigate('profile')">
+        <div class="streak-mini-title">🔥 7-Day Streak!</div>
+        <div class="streak-dots">
+          <div class="s-dot2 done">M</div><div class="s-dot2 done">T</div><div class="s-dot2 done">W</div><div class="s-dot2 done">T</div><div class="s-dot2 done">F</div><div class="s-dot2 done">S</div><div class="s-dot2 today">S</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <!-- HOME -->
+      <div class="page active" id="page-home">
+        <div class="hero-banner">
+          <div class="hero-greeting">Good Evening</div>
+          <div class="hero-title" id="homeWelcome">Welcome back,<br>Reader ✨</div>
+          <div class="hero-sub">You have 3 new chapter updates waiting</div>
+          <div class="hero-stats">
+            <div class="hs-item"><div class="hs-num">6</div><div class="hs-lbl">❤️ Favourites</div></div>
+            <div class="hs-item"><div class="hs-num">89</div><div class="hs-lbl">✅ Completed</div></div>
+            <div class="hs-item"><div class="hs-num">1.2k</div><div class="hs-lbl">⏱️ Hours Read</div></div>
+          </div>
+        </div>
+        <div class="content-area">
+          <div class="section-header"><div class="section-title">🔴 New Updates</div><div class="section-link">See all →</div></div>
+          <div class="updates-row" id="updatesRow"></div>
+          <div class="section-header"><div class="section-title">▶ Continue Reading</div><div class="section-link" onclick="navigate('shelf')">Full history →</div></div>
+          <div class="continue-grid" id="continueGrid"></div>
+          <div class="premium-banner" id="premiumBanner">
+            <span class="pb-icon">👑</span>
+            <div class="pb-text"><b>Upgrade to Premium</b><span>Unlimited reading · No ads · Offline mode · Early access</span></div>
+            <button class="pb-btn">Learn More</button>
+            <span class="pb-close" onclick="event.stopPropagation();dismissPremium()">✕</span>
+            <div class="pb-tag">Ad</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEARCH -->
+      <div class="page" id="page-search">
+        <div class="search-page-content">
+          <div class="page-heading">Explore Novels</div>
+          <div class="search-bar-lg">
+            <span class="search-icon-lg">🔍</span>
+            <input class="search-input-lg" id="searchInputMain" placeholder="Search by title, genre, keyword…" oninput="handleSearch(this.value)" onkeydown="if(event.key==='Escape')clearSearchMain()">
+            <span class="search-clear-lg" id="searchClearMain" onclick="clearSearchMain()">✕</span>
+          </div>
+          <div class="filter-tags">
+            <div class="f-tag active" data-cat="all"       onclick="filterCat(this,'all')">All</div>
+            <div class="f-tag"        data-cat="translate" onclick="filterCat(this,'translate')">Translated</div>
+            <div class="f-tag"        data-cat="original"  onclick="filterCat(this,'original')">Original</div>
+            <div class="f-tag"        data-cat="fantasy"   onclick="filterCat(this,'fantasy')">⚔️ Fantasy</div>
+            <div class="f-tag"        data-cat="romance"   onclick="filterCat(this,'romance')">💕 Romance</div>
+          </div>
+          <div class="results-grid" id="searchResults"></div>
+        </div>
+      </div>
+
+      <!-- SHELF -->
+      <div class="page" id="page-shelf">
+        <div class="shelf-page-content">
+          <div class="shelf-top">
+            <div class="page-heading" style="margin-bottom:0">Reading History</div>
+            <div>
+              <button class="sync-btn" id="syncBtn" onclick="doSync()"><span class="si" id="syncIcon">↻</span><span id="syncTxt">Sync Data</span></button>
+              <div class="sync-time" id="syncTime">Last saved: Today 09:41</div>
+            </div>
+          </div>
+          <div class="info-tip"><span class="it-icon">💡</span><div class="it-text"><b>Cloud Sync</b> saves your reading progress and makes it accessible across all your devices.</div></div>
+          <div class="hist-search-wrap"><span class="hist-search-icon">🔍</span><input class="hist-search-input" id="histSearchInput" placeholder="Search history…" oninput="filterHist(this.value)"></div>
+          <div id="historyList"></div>
+        </div>
+      </div>
+
+      <!-- PROFILE -->
+      <div class="page" id="page-profile">
+        <div class="profile-content">
+          <div class="profile-top">
+            <div class="profile-avatar-lg" id="profileAvatar" onclick="changeAvatar()">🦋<div class="avatar-edit-badge">✏️</div></div>
+            <div class="profile-meta">
+              <div class="profile-name" id="profName">Reader</div>
+              <div class="profile-sub">Member since January 2023 · Tap avatar to change</div>
+              <div class="stats-bar">
+                <div class="stat-box-w"><span class="stat-num" id="heartCount">247</span><div class="stat-lbl">Favourites</div></div>
+                <div class="stat-box-w"><span class="stat-num">89</span><div class="stat-lbl">Completed</div></div>
+                <div class="stat-box-w"><span class="stat-num">1.2k</span><div class="stat-lbl">Hours</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="streak-card-w">
+            <div class="streak-icon-lg">🔥</div>
+            <div class="streak-info-w">
+              <div class="streak-title-w">7-Day Streak!</div>
+              <div class="streak-sub-w">Read today to keep your streak alive</div>
+              <div class="streak-dots-w"><div class="sd-w done">M</div><div class="sd-w done">T</div><div class="sd-w done">W</div><div class="sd-w done">T</div><div class="sd-w done">F</div><div class="sd-w done">S</div><div class="sd-w today">S</div></div>
+            </div>
+          </div>
+          <div class="hearts-section-title"><span style="font-size:20px">❤️</span><div class="hst">Favourites</div></div>
+          <div class="filter-chips-row" id="filterChips">
+            <div class="chip-w active" data-filter="all"       onclick="filterHearts(this,'all')">All</div>
+            <div class="chip-w"        data-filter="translate" onclick="filterHearts(this,'translate')">Translated</div>
+            <div class="chip-w"        data-filter="original"  onclick="filterHearts(this,'original')">Original</div>
+            <div class="chip-w"        data-filter="done"      onclick="filterHearts(this,'done')">Completed ✓</div>
+            <div class="chip-w"        data-filter="ongoing"   onclick="filterHearts(this,'ongoing')">Ongoing</div>
+          </div>
+          <div class="hearts-grid-w" id="heartsGrid"></div>
+        </div>
+      </div>
+
+      <!-- WRITER STUDIO -->
+      <div class="page" id="page-writer">
+        <div class="writer-hero">
+          <div class="hero-greeting">Create &amp; Organise</div>
+          <div class="hero-title" style="font-size:30px">Writer's Studio ✍️</div>
+          <div class="hero-sub">Plan your story, build characters, and manage your novel — all in one place</div>
+        </div>
+        <div class="writer-content">
+          <div class="writer-topbar">
+            <div style="display:flex;align-items:center;gap:12px;flex:1">
+              <div class="w-label">📖 Current project:</div>
+              <select class="w-select" id="projectSelect" onchange="switchProject(this.value)">
+                <option value="0">🌹 The Little Empress (Draft 1)</option>
+                <option value="1">+ New Project</option>
+              </select>
+            </div>
+            <button class="w-btn-primary" onclick="saveProject()">💾 Save</button>
+            <button class="w-btn-secondary" onclick="exportProject()">📤 Export</button>
+          </div>
+          <div class="writer-grid">
+            <div class="w-card" style="grid-column:span 2">
+              <div class="w-card-header"><div class="w-card-icon">👤</div><div class="w-card-title">Characters</div><button class="w-add-btn" onclick="addCharacter()">+ Add Character</button></div>
+              <div class="char-table-wrap"><table class="char-table" id="charTable"><thead><tr><th>Name</th><th>Role</th><th>Personality</th><th>Goal</th><th>Backstory</th><th></th></tr></thead><tbody id="charRows"></tbody></table></div>
+            </div>
+            <div class="w-card">
+              <div class="w-card-header"><div class="w-card-icon">📐</div><div class="w-card-title">Story Structure</div></div>
+              <div class="struct-list">
+                <div class="struct-item"><div class="struct-badge hook">Hook</div><div class="struct-body"><div class="struct-label">Opening Scene / Hook</div><textarea class="w-textarea" id="sHook" placeholder="The scene that grabs the reader…"></textarea></div></div>
+                <div class="struct-item"><div class="struct-badge inciting">Inciting</div><div class="struct-body"><div class="struct-label">Inciting Incident</div><textarea class="w-textarea" id="sInciting" placeholder="The event that changes everything…"></textarea></div></div>
+                <div class="struct-item"><div class="struct-badge climax">Climax</div><div class="struct-body"><div class="struct-label">Climax</div><textarea class="w-textarea" id="sClimax" placeholder="The peak of the conflict…"></textarea></div></div>
+                <div class="struct-item"><div class="struct-badge resolution">Resolution</div><div class="struct-body"><div class="struct-label">Resolution</div><textarea class="w-textarea" id="sResolution" placeholder="How things are resolved…"></textarea></div></div>
+              </div>
+            </div>
+            <div class="w-card">
+              <div class="w-card-header"><div class="w-card-icon">🌍</div><div class="w-card-title">World &amp; Setting</div></div>
+              <div class="setting-grid">
+                <div><div class="w-field-label">📍 Main Location</div><textarea class="w-textarea" id="wPlace" placeholder="Name and scene details…"></textarea></div>
+                <div><div class="w-field-label">⚖️ World Rules</div><textarea class="w-textarea" id="wRules" placeholder="Magic system, social rules…"></textarea></div>
+                <div><div class="w-field-label">🕰️ Era</div><textarea class="w-textarea" id="wEra" placeholder="History, world context…"></textarea></div>
+                <div><div class="w-field-label">🌡️ Atmosphere</div><textarea class="w-textarea" id="wMood" placeholder="Tone, mood, feel…"></textarea></div>
+              </div>
+            </div>
+            <div class="w-card" style="grid-column:span 2">
+              <div class="w-card-header"><div class="w-card-icon">📅</div><div class="w-card-title">Timeline — Key Events</div><button class="w-add-btn" onclick="addTimelineRow()">+ Add Event</button></div>
+              <div class="char-table-wrap"><table class="char-table" id="timelineTable"><thead><tr><th style="width:80px">Chapter</th><th>Event Name</th><th>Characters</th><th>Location</th><th>Outcome</th><th style="width:70px">Importance</th><th></th></tr></thead><tbody id="timelineRows"></tbody></table></div>
+            </div>
+            <div class="w-card"><div class="w-card-header"><div class="w-card-icon">📝</div><div class="w-card-title">Personal Notes</div></div><textarea class="w-textarea" id="wNotes" style="min-height:160px" placeholder="Ideas, quotes, to-dos…"></textarea></div>
+            <div class="w-card">
+              <div class="w-card-header"><div class="w-card-icon">🎭</div><div class="w-card-title">Theme &amp; Tone</div></div>
+              <div class="theme-rows">
+                <div><div class="w-field-label">💡 Core Theme</div><input class="w-input" id="tTheme" placeholder="e.g. Sacrifice for love…"></div>
+                <div><div class="w-field-label">🎯 Message</div><input class="w-input" id="tMessage" placeholder="e.g. Love conquers all…"></div>
+                <div><div class="w-field-label">📚 Genre</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><span class="genre-chip active" onclick="toggleGenre(this)">💕 Romance</span><span class="genre-chip" onclick="toggleGenre(this)">⚔️ Fantasy</span><span class="genre-chip" onclick="toggleGenre(this)">🌌 Sci-Fi</span><span class="genre-chip" onclick="toggleGenre(this)">🔍 Mystery</span><span class="genre-chip" onclick="toggleGenre(this)">👻 Horror</span><span class="genre-chip" onclick="toggleGenre(this)">😂 Comedy</span></div></div>
+                <div><div class="w-field-label">⭐ Rating</div><div style="display:flex;gap:8px;margin-top:6px"><span class="genre-chip" onclick="toggleRating(this)">General</span><span class="genre-chip active" onclick="toggleRating(this)">PG-13</span><span class="genre-chip" onclick="toggleRating(this)">R (18+)</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- READER -->
+<div class="reader-overlay" id="readerPage">
+  <div class="reader-topbar">
+    <div class="reader-back" onclick="closeReader()">← Back</div>
+    <div class="reader-title-info"><div class="reader-book-name" id="readerBookTitle"></div><div class="reader-ch-name" id="readerEpTitle"></div></div>
+    <div class="reader-controls">
+      <button class="rctrl" onclick="toggleFontPanel()">Aa Settings</button>
+      <button class="rctrl" id="readerHeartBtn" onclick="toggleHeart()">🤍 Like</button>
+    </div>
+  </div>
+  <div class="font-panel-w" id="fontPanel">
+    <span class="fp-label">Font Size</span>
+    <button class="fp-btn-w" onclick="setFontSize('sm')">Small</button>
+    <button class="fp-btn-w active" onclick="setFontSize('md')">Medium</button>
+    <button class="fp-btn-w" onclick="setFontSize('lg')">Large</button>
+    <div class="fp-sep"></div>
+    <span class="fp-label">Theme</span>
+    <div class="fp-theme-w active" style="background:#0A0C14;border:1.5px solid rgba(255,255,255,0.15)" onclick="setTheme('default')"></div>
+    <div class="fp-theme-w" style="background:#FAF0D7" onclick="setTheme('sepia')"></div>
+    <div class="fp-theme-w" style="background:#111120" onclick="setTheme('dark')"></div>
+  </div>
+  <div class="reader-progress-bar"><div class="reader-progress-fill" id="readerProgressFill"></div></div>
+  <div class="reader-main" id="readerBody"><div class="reader-text fs-md" id="readerContent"></div></div>
+  <div class="reader-bottombar">
+    <button class="rbtn" onclick="prevEp()">← Previous</button>
+    <button class="rbtn primary" onclick="nextEp()">Next →</button>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="bookModal" onclick="closeModal(event)">
+  <div class="modal-box">
+    <div class="modal-close" onclick="document.getElementById('bookModal').classList.remove('open')">✕</div>
+    <div class="modal-cover" id="modalCover"></div>
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-meta" id="modalMeta"></div>
+    <div class="modal-tags" id="modalTags"></div>
+    <div class="modal-desc" id="modalDesc"></div>
+    <div class="modal-actions">
+      <button class="btn-prim" id="modalReadBtn" onclick="readFromModal()">▶ Continue Reading</button>
+      <button class="btn-sec" id="modalHeartBtn" onclick="toggleHeartModal()">❤️</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="undo-toast" id="undoToast"><span id="undoMsg">Removed from favourites</span><button class="undo-btn" onclick="performUndo()">Undo</button></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   ⚙️  SUPABASE CONFIG
+   ─────────────────────────────────────────────────────────────
+   วิธีตั้งค่า (ทำครั้งเดียว ~10 นาที):
+
+   1. ไปที่ supabase.com → สร้างโปรเจกต์ฟรี
+   2. ไปที่ Settings → API → คัดลอก Project URL และ anon key
+   3. วางลงด้านล่างนี้แทน YOUR_PROJECT_URL และ YOUR_ANON_KEY
+
+   4. ไปที่ SQL Editor → วางและรันคำสั่งนี้:
+
+      create table public.profiles (
+        id       uuid primary key references auth.users(id) on delete cascade,
+        email    text not null,
+        username text unique not null,
+        avatar   text default '🦋'
+      );
+      alter table public.profiles enable row level security;
+      create policy "Anyone can read profiles"
+        on profiles for select using (true);
+      create policy "Owner can insert"
+        on profiles for insert with check (auth.uid() = id);
+      create policy "Owner can update"
+        on profiles for update using (auth.uid() = id);
+
+   หลังจากนั้นระบบ login จะทำงานได้จริงทันที!
+══════════════════════════════════════════════════════════════ */
+
+/* --- ส่วนที่ 1: ตั้งค่าเชื่อมต่อ (มีอยู่แล้วในรูป 2e7363) --- */
+const SUPABASE_URL = 'https://toghchlzhavakirvvmyf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_8tuHSPxeivrVB6b9Z3Ubrg_Oip0DCrz';
+
+// บรรทัดนี้สำคัญ ต้องเพิ่มเข้าไปเพื่อสร้างตัวใช้งาน Supabase
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* --- ส่วนที่ 2: วางฟังก์ชัน signInWithGoogle ต่อท้ายตรงนี้ --- */
+async function signInWithGoogle() {
+    const { data, error } = await supabaseClient.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            // แก้เป็น 5500 ตามพอร์ตของ Live Server คุณครับ
+            redirectTo: 'http://localhost:5500', 
+        },
+    });
+
+    if (error) {
+        console.error('Error:', error.message);
+        alert('Login failed: ' + error.message);
+    }
+}
+/* ══════════════════════════════════════════
+   AUTH SYSTEM
+══════════════════════════════════════════ */
+
+let _sb = null;
+function sb() {
+  if (!_sb) {
+    if (SUPABASE_URL === 'YOUR_PROJECT_URL') return null; // not configured
+    _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+  return _sb;
+}
+
+// ── State ──
+const auth = { tab:'login', rememberMe:false, user:null, usernameTimer:null };
+
+// ── Init: check existing session ──
+window.addEventListener('DOMContentLoaded', async () => {
+  const client = sb();
+  if (!client) {
+    // Not configured yet — show a helpful inline notice
+    showBanner('err', '⚙️ Supabase not configured — add your URL and Key in the source code.');
+    return;
+  }
+
+  const { data: { session } } = await client.auth.getSession();
+  if (session?.user) {
+    const user = await fetchProfile(session.user);
+    loginSuccess(user, false);
+  }
+
+  // Listen for auth changes (e.g. coming back after Google OAuth redirect)
+  client.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session?.user && !auth.user) {
+      const user = await fetchProfile(session.user);
+      loginSuccess(user, true);
+    }
+    if (event === 'PASSWORD_RECOVERY') {
+      switchTab('reset');
+    }
+  });
+});
+
+async function fetchProfile(supabaseUser) {
+  const client = sb();
+  let username = supabaseUser.user_metadata?.username || supabaseUser.email.split('@')[0];
+  let avatar   = supabaseUser.user_metadata?.avatar   || '🦋';
+
+  if (client) {
+    const { data } = await client.from('profiles').select('username,avatar').eq('id', supabaseUser.id).single();
+    if (data) { username = data.username; avatar = data.avatar; }
+  }
+  return { id: supabaseUser.id, email: supabaseUser.email, username, avatar };
+}
+
+// ── Tab switching ──
+function switchTab(tab) {
+  auth.tab = tab;
+  ['formLogin','formRegister','formReset'].forEach(f => {
+    const el = document.getElementById(f);
+    if (el) { el.classList.remove('active'); }
+  });
+  const map = { login:'formLogin', register:'formRegister', reset:'formReset' };
+  if (map[tab]) {
+    const f = document.getElementById(map[tab]);
+    if (f) {
+      f.classList.add('active');
+      f.style.animation = 'none'; f.offsetHeight; f.style.animation = '';
+    }
+  }
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', ['login','register'][i] === tab));
+  document.getElementById('authTabs').style.display = tab === 'reset' ? 'none' : '';
+  clearBanners();
+}
+
+// ── Banners ──
+function clearBanners() {
+  document.getElementById('authErr').classList.remove('show');
+  document.getElementById('authOk').classList.remove('show');
+  document.querySelectorAll('.auth-input').forEach(i => i.classList.remove('err'));
+  document.querySelectorAll('.field-err-msg').forEach(e => e.classList.remove('show'));
+}
+function showBanner(type, msg) {
+  clearBanners();
+  const el = document.getElementById(type === 'err' ? 'authErr' : 'authOk');
+  document.getElementById(type === 'err' ? 'authErrMsg' : 'authOkMsg').innerHTML = msg;
+  el.classList.add('show');
+  if (type === 'err') {
+    const card = document.getElementById('authCard');
+    card.style.animation = 'none'; card.offsetHeight; card.style.animation = 'shake 0.4s ease';
+  }
+}
+function fieldErr(inputId, errId, msg) {
+  document.getElementById(inputId)?.classList.add('err');
+  const el = document.getElementById(errId);
+  if (el) { el.textContent = msg; el.classList.add('show'); }
+}
+
+function isEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+function isValidUsername(s) { return /^[a-z0-9_]{3,20}$/.test(s); }
+
+// ── Btn loading ──
+function setBtnLoading(id, on) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.classList.toggle('loading', on);
+  btn.disabled = on;
+}
+
+// ════ LOGIN ════
+async function doLogin() {
+  clearBanners();
+  const identifier = document.getElementById('loginId').value.trim();
+  const pw         = document.getElementById('loginPw').value;
+  let ok = true;
+  if (!identifier) { fieldErr('loginId','loginIdErr','Please enter your email or username'); ok=false; }
+  if (!pw)         { fieldErr('loginPw','loginPwErr','Please enter your password'); ok=false; }
+  if (!ok) return;
+
+  const client = sb();
+  if (!client) { showBanner('err','Supabase not configured'); return; }
+  setBtnLoading('loginBtn', true);
+
+  // If not email → lookup email from profiles table
+  let email = identifier;
+  if (!isEmail(identifier)) {
+    const { data, error } = await client.from('profiles').select('email').eq('username', identifier.toLowerCase()).single();
+    if (error || !data) {
+      setBtnLoading('loginBtn', false);
+      fieldErr('loginId','loginIdErr','Invalid login');
+      return;
+    }
+    email = data.email;
+  }
+
+  const { data, error } = await client.auth.signInWithPassword({ email, password: pw });
+  setBtnLoading('loginBtn', false);
+
+  if (error) {
+    if (error.message.includes('Email not confirmed')) {
+      showBanner('err', 'Please verify your email first — check your inbox.');
+    } else if (error.message.includes('Invalid login')) {
+      showBanner('err', 'Incorrect email/username or password.');
+      document.getElementById('loginId')?.classList.add('err');
+      document.getElementById('loginPw')?.classList.add('err');
+    } else {
+      showBanner('err', error.message);
+    }
+    return;
+  }
+
+  const user = await fetchProfile(data.user);
+  if (auth.rememberMe) {
+    // Supabase persists session in localStorage by default when rememberMe is true
+    await client.auth.updateSession();
+  }
+  loginSuccess(user, true, false);
+}
+
+// ════ REGISTER ════
+async function doRegister() {
+  clearBanners();
+  const username = document.getElementById('regUser').value.trim().toLowerCase();
+  const email    = document.getElementById('regEmail').value.trim();
+  const pw       = document.getElementById('regPw').value;
+  const pw2      = document.getElementById('regPw2').value;
+  let ok = true;
+
+  if (!isValidUsername(username)) { fieldErr('regUser','regUserErr','3–20 chars, a-z 0-9 _ only'); ok=false; }
+  if (!isEmail(email))            { fieldErr('regEmail','regEmailErr','Invalid email address'); ok=false; }
+  if (pw.length < 8)              { fieldErr('regPw','regPwErr','Password must be at least 8 characters'); ok=false; }
+  if (pw !== pw2)                 { fieldErr('regPw2','regPw2Err','Passwords do not match'); ok=false; }
+  if (!ok) return;
+
+  const client = sb();
+  if (!client) { showBanner('err','Supabase not configured'); return; }
+  setBtnLoading('regBtn', true);
+
+  // Check username availability one more time
+  const { data: existing } = await client.from('profiles').select('id').eq('username', username).single();
+  if (existing) {
+    setBtnLoading('regBtn', false);
+    fieldErr('regUser','regUserErr','Username already taken');
+    return;
+  }
+
+  // Create auth user
+  const { data, error } = await client.auth.signUp({
+    email, password: pw,
+    options: { data: { username, avatar: '⭐' } }
+  });
+  setBtnLoading('regBtn', false);
+
+  if (error) {
+    if (error.message.includes('already registered')) {
+      showBanner('err', 'This email already has an account — try signing in.');
+      document.getElementById('regEmail')?.classList.add('err');
+    } else { showBanner('err', error.message); }
+    return;
+  }
+
+  // Write to profiles table
+  if (data.user) {
+    await client.from('profiles').upsert({ id: data.user.id, email, username, avatar: '⭐' });
+  }
+
+  if (data.session) {
+    // Email confirmation disabled — logged in immediately
+    loginSuccess({ id: data.user.id, email, username, avatar: '⭐' }, true, true);
+  } else {
+    // Email confirmation required
+    showEmailConfirm(email);
+  }
+}
+
+function showEmailConfirm(email) {
+  ['formLogin','formRegister','formReset'].forEach(f => document.getElementById(f)?.classList.remove('active'));
+  document.getElementById('authTabs').style.display = 'none';
+  clearBanners();
+  const suc = document.getElementById('authSuccess');
+  suc.classList.add('show');
+  document.getElementById('sucIcon').textContent  = '📬';
+  document.getElementById('sucTitle').textContent = 'Check your email!';
+  document.getElementById('sucSub').textContent   = 'We sent a confirmation link to ' + email;
+  document.getElementById('sucBadges').innerHTML  = '<div class="suc-badge">Click the link in your email to activate your account</div>';
+  document.getElementById('sucBar').style.transition = 'none';
+  document.getElementById('sucBar').style.width = '100%';
+  const hint = document.querySelector('.suc-hint');
+  if (hint) hint.innerHTML = `<span style="color:var(--accent-2);cursor:pointer" onclick="resendEmail('${email}')">Resend email</span>`;
+}
+
+async function resendEmail(email) {
+  const client = sb(); if (!client) return;
+  const { error } = await client.auth.resend({ type:'signup', email });
+  showToast(error ? 'Failed to resend — try again' : '📬 Email sent again!');
+}
+
+// ════ RESET PASSWORD ════
+async function doReset() {
+  clearBanners();
+  const email = document.getElementById('resetEmail').value.trim();
+  if (!isEmail(email)) { fieldErr('resetEmail','resetEmailErr','Please enter a valid email'); return; }
+
+  const client = sb();
+  if (!client) { showBanner('err','Supabase not configured'); return; }
+  setBtnLoading('resetBtn', true);
+
+  const { error } = await client.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.href
+  });
+  setBtnLoading('resetBtn', false);
+
+  const form = document.getElementById('formReset');
+  if (error) {
+    form.innerHTML =  form.innerHTML = `<div class="reset-back" onclick="switchTab('login')">← Back</div><div style="text-align:center;color:var(--rose);padding:20px 0">${error.message}</div>`;
+  } else {
+    form.innerHTML = `<div style="text-align:center;padding:20px 0"><span style="font-size:48px;display:block;margin-bottom:14px">📬</span><div style="font-family:var(--font-serif);font-size:22px;font-weight:700;color:var(--txt);margin-bottom:8px">Link Sent!</div><div style="font-size:12px;color:var(--txt-3);line-height:1.8;margin-bottom:24px">Check your inbox at<br><b style="color:var(--txt-2)">${email}</b></div><div class="reset-back" style="justify-content:center;display:flex" onclick="switchTab('login')">← Back to sign in</div></div>`;
+  }
+}
+
+// ════ GOOGLE ════
+async function doGoogle() {
+  const client = sb(); 
+  const { error } = await client.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      // ลองแก้เป็นแบบนี้ครับ
+      redirectTo: 'http://localhost:5500' 
+    }
+  });
+  if (error) console.error(error.message);
+}
+
+// ════ LOGOUT ════
+async function doLogout() {
+  const client = sb();
+  if (client) await client.auth.signOut();
+  auth.user = null;
+  location.reload();
+}
+
+// ════ LOGIN SUCCESS ════
+function loginSuccess(user, animate, isNew) {
+  auth.user = user;
+  updateUIForUser(user);
+  if (!animate) { showApp(); return; }
+  ['formLogin','formRegister','formReset'].forEach(f => document.getElementById(f)?.classList.remove('active'));
+  document.getElementById('authTabs').style.display = 'none';
+  clearBanners();
+  const suc = document.getElementById('authSuccess');
+  suc.classList.add('show');
+  document.getElementById('sucIcon').textContent  = isNew ? '🌟' : (user.avatar || '✨');
+  document.getElementById('sucTitle').textContent = isNew ? 'Welcome, ' + user.username + '!' : 'Welcome back, ' + user.username + '!';
+  document.getElementById('sucSub').textContent   = isNew ? 'Your account is ready — start reading!' : 'Great to see you again. Your library awaits.';
+  document.getElementById('sucBadges').innerHTML  = isNew
+    ? '<div class="suc-badge">📖 Ready to read</div><div class="suc-badge">🆕 New member</div>'
+    : '<div class="suc-badge">📚 89 books</div><div class="suc-badge">🔥 7-day streak</div><div class="suc-badge">❤️ 6 favourites</div>';
+  setTimeout(() => { document.getElementById('sucBar').style.width = '100%'; }, 100);
+  setTimeout(() => { showApp(); }, 3000);
+}
+
+function updateUIForUser(user) {
+  document.getElementById('navAv').textContent   = user.avatar || '🦋';
+  document.getElementById('navName').textContent = user.username;
+  document.getElementById('ddName').textContent  = user.username;
+  document.getElementById('ddEmail').textContent = user.email;
+  const hw = document.getElementById('homeWelcome');
+  if (hw) hw.innerHTML = 'ยินดีต้อนรับกลับมา,<br>' + user.username + ' ✨';
+  const pn = document.getElementById('profName');
+  if (pn) pn.textContent = user.username;
+  const pa = document.getElementById('profileAvatar');
+  if (pa) pa.innerHTML = (user.avatar||'🦋') + '<div class="avatar-edit-badge">✏️</div>';
+}
+
+function showApp() {
+  const as = document.getElementById('authScreen');
+  const ac = document.getElementById('appContainer');
+  as.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+  as.style.opacity = '0'; as.style.transform = 'scale(1.04)';
+  setTimeout(() => {
+    as.style.display = 'none';
+    ac.classList.add('visible');
+    renderHome(); renderSearch(''); renderHistory(); renderHearts('all');
+    renderSidebarUpdates(); renderNotifPanel();
+  }, 500);
+}
+
+// ── UI Helpers ──
+function togglePw(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+function toggleRemember() {
+  auth.rememberMe = !auth.rememberMe;
+  document.getElementById('rememberBox').classList.toggle('on', auth.rememberMe);
+}
+
+// Password strength meter
+function onPwStrength(pw) {
+  const wrap = document.getElementById('pwStr'), lbl = document.getElementById('pwStrLbl');
+  if (!pw) { wrap.classList.remove('show'); return; }
+  wrap.classList.add('show');
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^a-zA-Z0-9]/.test(pw)) score++;
+  const bars = ['pb1','pb2','pb3','pb4'].map(id => document.getElementById(id));
+  bars.forEach(b => { b.className = 'pw-bar'; });
+  if (score <= 1) { bars[0].classList.add('weak'); lbl.textContent='⚠️ Weak — add numbers or special chars'; lbl.style.color='var(--rose)'; }
+  else if (score <= 3) { bars[0].classList.add('med'); bars[1].classList.add('med'); lbl.textContent='🔶 Fair'; lbl.style.color='var(--amber)'; }
+  else if (score <= 4) { bars[0].classList.add('str'); bars[1].classList.add('str'); bars[2].classList.add('str'); lbl.textContent='✅ Strong'; lbl.style.color='var(--jade)'; }
+  else { bars.forEach(b=>b.classList.add('str')); lbl.textContent='🔒 Very strong!'; lbl.style.color='var(--jade)'; }
+}
+
+// Username live availability check
+let _userTimer = null;
+async function onUsernameInput(val) {
+  const check = document.getElementById('userCheck');
+  const v = val.trim().toLowerCase();
+  if (!v) { check.textContent=''; check.className='user-check'; return; }
+  if (!isValidUsername(v)) { check.textContent='Use a-z, 0-9, _ only (3–20 chars)'; check.className='user-check no'; return; }
+  check.textContent='Checking…'; check.className='user-check checking';
+  clearTimeout(_userTimer);
+  _userTimer = setTimeout(async () => {
+    const client = sb(); if (!client) { check.textContent=''; return; }
+    const { data } = await client.from('profiles').select('id').eq('username', v).single();
+    if (data) { check.textContent='❌ Username taken'; check.className='user-check no'; }
+    else      { check.textContent='✅ Username available!'; check.className='user-check ok'; }
+  }, 500);
+}
+
+// User dropdown
+function toggleDD() { document.getElementById('userDD').classList.toggle('open'); }
+function closeDD()  { document.getElementById('userDD').classList.remove('open'); }
+document.addEventListener('click', e => {
+  const pill = document.getElementById('userPill');
+  if (pill && !pill.contains(e.target)) closeDD();
+});
+
+/* ══════════════════════════════════════════
+   MAIN APP
+══════════════════════════════════════════ */
+const BOOKS = [
+  {id:'b1',title:'The Little Empress',emoji:'🌹',color:'c8',type:'translate',genre:'romance',status:'ongoing',ep:142,totalEp:200,pct:71,hasNew:true,desc:'A young woman is transported to a fantasy world and must fight for the throne and love in a land of ancient magic.',lastRead:'2 hours ago',lastEpName:'Battle for the Throne'},
+  {id:'b2',title:'Demon Lord Conquest',emoji:'⚔️',color:'c2',type:'translate',genre:'fantasy',status:'ongoing',ep:89,totalEp:0,pct:40,hasNew:true,desc:'A betrayed demon lord regains his power and sets out to conquer every kingdom on his path of revenge.',lastRead:'5 hours ago',lastEpName:'The Ancient Beast Awakens'},
+  {id:'b3',title:'Dark Moon Nights',emoji:'🌙',color:'c7',type:'original',genre:'romance',status:'ongoing',ep:23,totalEp:60,pct:38,hasNew:true,desc:'A sharp-tongued detective and a mysterious stranger find themselves drawn into a dangerous love neither wants to feel.',lastRead:'Yesterday 9:30pm',lastEpName:'Secrets in the Forest'},
+  {id:'b4',title:'The Solitary Lord',emoji:'🏯',color:'c3',type:'original',genre:'fantasy',status:'done',ep:150,totalEp:150,pct:100,hasNew:false,desc:'An epic of a king who rules by force alone — until he discovers that even the mightiest heart can break.',lastRead:'Yesterday 6:15pm',lastEpName:'Finale ✓'},
+  {id:'b5',title:'The Last Dragon',emoji:'🐉',color:'c4',type:'translate',genre:'fantasy',status:'ongoing',ep:45,totalEp:280,pct:16,hasNew:false,desc:'The last dragon must survive among hunters, and the few brave enough to protect it.',lastRead:'3 months ago',lastEpName:'Flames of Dawn'},
+  {id:'b6',title:'Black Hole Heart',emoji:'🌌',color:'c1',type:'original',genre:'romance',status:'done',ep:80,totalEp:80,pct:100,hasNew:false,desc:'Two souls orbit each other in the void of feeling, until they finally admit the truth they have both hidden.',lastRead:'4 months ago',lastEpName:'Finale ✓'},
+  {id:'b7',title:'The Golden Mask',emoji:'🎭',color:'c5',type:'original',genre:'romance',status:'ongoing',ep:18,totalEp:50,pct:36,hasNew:false,desc:'An actress discovers a brilliant director always wears a golden mask — and begins to wonder why.',lastRead:'1 week ago',lastEpName:'Chapter 18'},
+  {id:'b8',title:'Winter Secret Garden',emoji:'🌿',color:'c6',type:'original',genre:'romance',status:'ongoing',ep:32,totalEp:45,pct:71,hasNew:false,desc:'A garden that blooms only in winter, and a man who returns every year waiting for one woman.',lastRead:'2 weeks ago',lastEpName:'The Last Snow'},
+];
+
+const TEXTS = [
+  `Snow fell in silence, as if the sky were whispering something she didn't want to hear.\n\nShe stood by the window, staring at the garden that had once been filled with flowers — now as empty as the heart he had left behind.\n\n"Are you still here?" the young man's voice came from behind her.\n\nShe didn't turn. She knew that if she saw his face, the tears she'd been holding back would refuse to stay still any longer.\n\n"I'm leaving," she said quietly, her voice trembling.\n\nHe walked slowly toward her, the floorboards whispering softly beneath his feet, then stopped just behind her without touching her.\n\n"I know," he said. "But I want you to know — this garden will always be waiting for you."\n\nShe turned. Their eyes met, and in that silence, the things left unsaid rang louder than anything ever spoken.`,
+  `Blade met blade with a ringing crash, sparks scattering into the dark of that night.\n\n"Your technique has improved considerably," said the man in black, stepping back two paces.\n\n"Not enough," the young woman replied, lunging forward again. "I need to be stronger than this."\n\nThat night she trained until dawn, every muscle screaming with pain, but her resolve harder than ever.\n\nThe road to the throne was still long — but she had come this far. Nothing could stop her now.`,
+  `Tonight there was no moon, but starlight was enough for her to see the shadow of that man.\n\nHe always stood in the same spot — every night, every week, for nearly six months now.\n\n"Who are you waiting for?" she finally asked.\n\nHe turned, his eyes deep as an ocean. "The truth."\n\n"What truth?"\n\nHe smiled faintly. "The truth that the moon is still there tonight — it's just hiding behind clouds. Like certain people who hide their own hearts."`
+];
+
+const state = {
+  currentPage:'home', hearts:new Set(['b1','b2','b3','b4','b5','b6']),
+  readStories:new Set(), notifOpen:false, currentBook:null, currentEp:1,
+  searchCat:'all', avatarEmojis:['🦋','🐱','🐼','🦊','🐙','🦄','🌸','⭐','🐺','🦁'],
+  avatarIdx:0, undoAction:null, modalCurrentBook:null,
+};
+
+function navigate(page) {
+  if(state.notifOpen) closeNotif();
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const t = document.getElementById('page-'+page); if(!t)return;
+  t.classList.add('active'); state.currentPage=page;
+  document.querySelectorAll('.nav-link').forEach(n=>n.classList.remove('active'));
+  document.getElementById('navl-'+page)?.classList.add('active');
+  document.querySelectorAll('.sidebar-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('side-'+page)?.classList.add('active');
+  if(page==='search')  renderSearch('');
+  if(page==='shelf')   renderHistory();
+  if(page==='profile') renderHearts('all');
+  if(page==='writer')  initWriter();
+}
+
+function renderHome() {
+  const row = document.getElementById('updatesRow'); if (!row) return; row.innerHTML='';
+  const hb = BOOKS.filter(b=>b.ep>0 && state.hearts.has(b.id));
+  if (!hb.length) {
+    row.innerHTML=`<div style="display:flex;align-items:center;gap:12px;padding:16px 20px;background:var(--bg-3);border:1.5px dashed var(--border-2);border-radius:var(--r-lg);color:var(--txt-3);font-size:13px;min-width:280px"><span style="font-size:26px">🤍</span><div><div style="font-weight:600;color:var(--txt-2);margin-bottom:3px">No favourites yet</div>Like a novel to see updates here</div></div>`;
+    return;
+  }
+  hb.forEach(b=>{
+    const isNew = b.hasNew && !state.readStories.has(b.id);
+    const d = document.createElement('div'); d.className=`story-card${isNew?' has-update':''}`;
+    d.innerHTML=`${isNew?'<div class="sc-new-badge">New</div>':''}<div class="sc-cover"><div class="sc-new-ring" style="${isNew?'':'display:none'}"></div><div class="sc-inner ${b.color}">${b.emoji}</div>${isNew?'<div class="sc-new-dot"></div>':''}</div><div class="sc-title">${b.title}</div><div class="sc-ep">Ch.${b.ep}${b.totalEp?'/'+b.totalEp:'/∞'}</div>`;
+    d.onclick=()=>{ if(isNew){state.readStories.add(b.id);renderHome();} openReader(b); };
+    row.appendChild(d);
+  });
+  const grid = document.getElementById('continueGrid'); if (!grid) return; grid.innerHTML='';
+  BOOKS.filter(b=>b.pct<100).slice(0,6).forEach(b=>{
+    const d = document.createElement('div'); d.className='bcard';
+    d.innerHTML=`<div class="bcover ${b.color}">${b.emoji}</div><div class="binfo"><div class="bname">${b.title}</div><div class="bmeta">Ch.${b.ep}${b.totalEp?'/'+b.totalEp:'/∞'} · ${b.type==='translate'?'Translated':'Original'}</div><div class="bprog-bar"><div class="bprog-fill" style="width:${b.pct}%"></div></div><div class="bprog-label">${b.pct}% read</div></div><div class="baction">▶</div>`;
+    d.onclick=()=>openReader(b); grid.appendChild(d);
+  });
+}
+
+function renderSearch(q) {
+  const res = document.getElementById('searchResults'); if (!res) return;
+  let f = BOOKS;
+  if (state.searchCat!=='all') f = f.filter(b=>b.type===state.searchCat||b.genre===state.searchCat);
+  if (q.trim()) { const lq=q.toLowerCase(); f=f.filter(b=>b.title.toLowerCase().includes(lq)||b.desc.toLowerCase().includes(lq)); }
+  if (!f.length) { res.innerHTML=`<div class="no-results" style="grid-column:span 2"><span class="nr-icon">🔍</span><p>No results for "<b>${q}</b>"</p></div>`; return; }
+  res.innerHTML=f.map(b=>{ const h=state.hearts.has(b.id); return`<div class="result-card-w" onclick="openBookModal('${b.id}')"><div class="rc-cover ${b.color}">${b.emoji}</div><div class="rc-info"><div class="rc-title">${b.title}</div><div class="rc-meta">${b.type==='translate'?'Translated':'Original'} · ${b.totalEp?b.totalEp+' chapters':'Ongoing'}</div><div class="rc-tags"><span class="r-tag genre">${b.genre==='fantasy'?'⚔️ Fantasy':'💕 Romance'}</span><span class="r-tag status ${b.status}">${b.status==='done'?'✅ Complete':'🔄 Ongoing'}</span>${b.hasNew?'<span class="r-tag new">🆕 New</span>':''}</div></div><div class="rc-heart" onclick="event.stopPropagation();quickHeart('${b.id}')">${h?'❤️':'🤍'}</div></div>`; }).join('');
+}
+function handleSearch(v){document.getElementById('searchClearMain').style.display=v?'block':'none';renderSearch(v);}
+function handleTopSearch(){}
+function clearSearchMain(){const i=document.getElementById('searchInputMain');i.value='';document.getElementById('searchClearMain').style.display='none';renderSearch('');i.focus();}
+function filterCat(el,cat){document.querySelectorAll('.f-tag').forEach(t=>t.classList.remove('active'));el.classList.add('active');state.searchCat=cat;renderSearch(document.getElementById('searchInputMain')?.value||'');}
+
+function renderHistory(){
+  const grps=[{label:'Today',books:['b1','b2']},{label:'Yesterday',books:['b3','b4']},{label:'3 months ago',books:['b5','b6']}];
+  const el=document.getElementById('historyList');if(!el)return;
+  el.innerHTML=grps.map(g=>{
+    const items=g.books.map(id=>{
+      const b=BOOKS.find(x=>x.id===id);if(!b)return'';
+      return`<div class="hist-item-w" data-title="${b.title.toLowerCase()}" onclick="openReader(BOOKS.find(x=>x.id==='${b.id}'))"><div class="hist-cover-w ${b.color}">${b.emoji}</div><div class="hist-info-w"><div class="hist-title-w">${b.title}</div><div class="hist-ep-w">Ch.${b.ep} — "${b.lastEpName}"</div><div class="hist-time-w">🕐 ${b.lastRead}</div></div><div class="hist-pct-wrap"><div class="hist-pct">${b.pct}%</div><div class="hist-pct-bar"><div class="hist-pct-fill" style="width:${b.pct}%"></div></div></div></div>`;
+    }).join('');
+    return`<div class="grp-label">${g.label}</div><div class="history-grid">${items}</div>`;
+  }).join('');
+}
+function filterHist(q){q=q.toLowerCase().trim();document.querySelectorAll('.hist-item-w').forEach(i=>{i.style.display=(!q||(i.dataset.title||'').includes(q))?'':'none';});document.querySelectorAll('.grp-label').forEach(g=>{const grd=g.nextElementSibling;if(!grd)return;const vis=[...grd.querySelectorAll('.hist-item-w')].some(i=>i.style.display!=='none');g.style.display=(!q||vis)?'':'none';grd.style.display=(!q||vis)?'':'none';});}
+
+function renderHearts(filter='all'){
+  const grid=document.getElementById('heartsGrid');if(!grid)return;
+  let books=BOOKS.filter(b=>state.hearts.has(b.id));
+  if(filter==='translate')books=books.filter(b=>b.type==='translate');
+  else if(filter==='original')books=books.filter(b=>b.type==='original');
+  else if(filter==='done')books=books.filter(b=>b.status==='done');
+  else if(filter==='ongoing')books=books.filter(b=>b.status==='ongoing');
+  if(!books.length){grid.innerHTML=`<div class="empty-state"><span class="es-icon">📖</span><p>No books match this filter</p></div>`;return;}
+  grid.innerHTML=books.map(b=>`<div class="h-card-w" onclick="openBookModal('${b.id}')"><div class="h-cover-w ${b.color}">${b.emoji}<div class="h-heart-btn" onclick="event.stopPropagation();removeHeart('${b.id}')">❤️</div><div class="sbadge-w ${b.status==='done'?'done':'ongoing'}">${b.status==='done'?'Complete':'Ongoing'}</div></div><div class="h-info-w"><div class="h-name-w">${b.title}</div><div class="h-meta-w">${b.type==='translate'?'Translated':'Original'} · ${b.totalEp||'∞'} ch.</div></div></div>`).join('');
+  const cnt=document.getElementById('heartCount');if(cnt)cnt.textContent=state.hearts.size;
+}
+function filterHearts(el,filter){document.querySelectorAll('#filterChips .chip-w').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderHearts(filter);}
+
+let undoTimer=null;
+function removeHeart(id){state.hearts.delete(id);const ac=document.querySelector('#filterChips .chip-w.active');renderHearts(ac?.dataset.filter||'all');state.undoAction={type:'heart',id,wasAdded:true};showUndoToast('Removed from favourites 💔');}
+function quickHeart(id){if(state.hearts.has(id)){state.hearts.delete(id);state.undoAction={type:'heart',id,wasAdded:true};showUndoToast('Removed 💔');}else{state.hearts.add(id);showToast('Added to favourites ❤️');}renderSearch(document.getElementById('searchInputMain')?.value||'');renderSidebarUpdates();}
+function showUndoToast(msg){const t=document.getElementById('undoToast');document.getElementById('undoMsg').textContent=msg;t.classList.add('show');if(undoTimer)clearTimeout(undoTimer);undoTimer=setTimeout(()=>{t.classList.remove('show');state.undoAction=null;},4000);}
+function performUndo(){if(!state.undoAction)return;if(state.undoAction.wasAdded)state.hearts.add(state.undoAction.id);else state.hearts.delete(state.undoAction.id);renderHearts(document.querySelector('#filterChips .chip-w.active')?.dataset.filter||'all');renderSearch(document.getElementById('searchInputMain')?.value||'');document.getElementById('undoToast').classList.remove('show');state.undoAction=null;if(undoTimer)clearTimeout(undoTimer);showToast('Undone ↩️');}
+
+function openBookModal(id){const b=BOOKS.find(x=>x.id===id);if(!b)return;state.modalCurrentBook=b;document.getElementById('modalCover').textContent=b.emoji;document.getElementById('modalTitle').textContent=b.title;document.getElementById('modalMeta').textContent=`${b.type==='translate'?'Translated':'Original'} · ${b.genre==='fantasy'?'Fantasy':'Romance'} · ${b.totalEp?b.totalEp+' chapters':'Ongoing'}`;document.getElementById('modalTags').innerHTML=`<span class="r-tag genre">${b.genre==='fantasy'?'⚔️ Fantasy':'💕 Romance'}</span><span class="r-tag status ${b.status}">${b.status==='done'?'✅ Complete':'🔄 Ongoing'}</span>${b.hasNew?'<span class="r-tag new">🆕 New</span>':''}`;document.getElementById('modalDesc').textContent=b.desc;const rb=document.getElementById('modalReadBtn');rb.textContent=b.pct>0&&b.pct<100?`▶ Continue Ch.${b.ep}`:b.pct===100?'✓ Completed':'▶ Start Reading';rb.disabled=b.pct===100;rb.style.opacity=b.pct===100?'0.6':'1';document.getElementById('modalHeartBtn').textContent=state.hearts.has(id)?'❤️':'🤍';document.getElementById('bookModal').classList.add('open');}
+function closeModal(e){if(e.target===document.getElementById('bookModal'))document.getElementById('bookModal').classList.remove('open');}
+function readFromModal(){document.getElementById('bookModal').classList.remove('open');if(state.modalCurrentBook)openReader(state.modalCurrentBook);}
+function toggleHeartModal(){if(!state.modalCurrentBook)return;const id=state.modalCurrentBook.id;if(state.hearts.has(id)){state.hearts.delete(id);document.getElementById('modalHeartBtn').textContent='🤍';showToast('Removed 💔');}else{state.hearts.add(id);document.getElementById('modalHeartBtn').textContent='❤️';showToast('Added to favourites ❤️');}}
+
+function openReader(b){if(!b)return;state.currentBook=b;state.currentEp=b.ep;document.getElementById('readerBookTitle').textContent=b.title;document.getElementById('readerEpTitle').textContent=`Chapter ${b.ep}`;const hb=document.getElementById('readerHeartBtn');hb.textContent=state.hearts.has(b.id)?'❤️ Liked':'🤍 Like';loadChapter(b.ep,b.lastEpName,b.pct);document.getElementById('readerPage').classList.add('active');state.readStories.add(b.id);const rb=document.getElementById('readerBody');rb.onscroll=()=>{const h=rb.scrollHeight-rb.clientHeight;if(h<=0)return;document.getElementById('readerProgressFill').style.width=Math.min(100,(rb.scrollTop/h)*100).toFixed(1)+'%';};}
+function loadChapter(ep,name,pct){const txt=TEXTS[Math.floor(Math.random()*TEXTS.length)];document.getElementById('readerContent').innerHTML=`<div class="reader-ep-big">Chapter ${ep}${name?' — "'+name+'"':''}</div>`+txt.split('\n\n').map(p=>`<p style="margin-bottom:22px">${p}</p>`).join('');document.getElementById('readerProgressFill').style.width=(pct||0)+'%';document.getElementById('readerBody').scrollTop=0;}
+function closeReader(){document.getElementById('readerPage').classList.remove('active');document.getElementById('fontPanel').classList.remove('open');renderHome();}
+function toggleHeart(){if(!state.currentBook)return;const id=state.currentBook.id;const hb=document.getElementById('readerHeartBtn');if(state.hearts.has(id)){state.hearts.delete(id);hb.textContent='🤍 Like';showToast('Removed 💔');}else{state.hearts.add(id);hb.textContent='❤️ Liked';showToast('Added to favourites ❤️');}}
+function nextEp(){if(!state.currentBook)return;if(state.currentBook.totalEp&&state.currentEp>=state.currentBook.totalEp){showToast('📖 You have finished this novel!');return;}state.currentEp++;document.getElementById('readerEpTitle').textContent=`Chapter ${state.currentEp}`;loadChapter(state.currentEp,null,null);showToast('Chapter '+state.currentEp);}
+function prevEp(){if(!state.currentBook||state.currentEp<=1){showToast("This is the first chapter");return;}state.currentEp--;document.getElementById('readerEpTitle').textContent=`Chapter ${state.currentEp}`;loadChapter(state.currentEp,null,null);}
+function toggleFontPanel(){document.getElementById('fontPanel').classList.toggle('open');}
+function setFontSize(s){const c=document.getElementById('readerContent');c.classList.remove('fs-sm','fs-md','fs-lg');c.classList.add('fs-'+s);document.querySelectorAll('.fp-btn-w').forEach((b,i)=>{b.classList.toggle('active',['sm','md','lg'][i]===s);});}
+function setTheme(t){const c=document.getElementById('readerContent');const rb=document.getElementById('readerBody');c.classList.remove('theme-sepia','theme-dark');rb.style.background='';if(t==='sepia'){c.classList.add('theme-sepia');rb.style.background='#FAF0D7';}else if(t==='dark'){c.classList.add('theme-dark');rb.style.background='#111120';}document.querySelectorAll('.fp-theme-w').forEach((th,i)=>{th.classList.toggle('active',['default','sepia','dark'][i]===t);});}
+
+function toggleNotif(){state.notifOpen=!state.notifOpen;const p=document.getElementById('notifPanel');if(state.notifOpen){renderNotifPanel();p.classList.add('open');document.getElementById('notifDot').style.display='none';}else p.classList.remove('open');}
+function closeNotif(){state.notifOpen=false;document.getElementById('notifPanel').classList.remove('open');}
+function clearNotifs(){document.getElementById('notifList').innerHTML=`<div style="padding:28px;text-align:center;color:var(--txt-3);font-size:13px">No new notifications ✓</div>`;showToast('Notifications cleared ✓');}
+function openFromNotif(title){closeNotif();const b=BOOKS.find(x=>x.title===title);if(b)openReader(b);}
+function renderNotifPanel(){const hn=BOOKS.filter(b=>b.hasNew&&state.hearts.has(b.id));const list=document.getElementById('notifList');if(!list)return;if(!hn.length){list.innerHTML=`<div style="padding:24px 17px;text-align:center;color:var(--txt-3);font-size:12px;line-height:1.6">No new notifications<br><span style="font-size:10px">Notifications appear for novels you've ❤️ liked</span></div>`;return;}const ta=['2 minutes ago','1 hour ago','3 hours ago'];list.innerHTML=hn.map((b,i)=>`<div class="notif-item" onclick="openFromNotif('${b.title}')"><span class="ni-icon">${b.emoji}</span><div style="flex:1"><div class="ni-title">${b.title} — New Ch.${b.ep+1}!</div><div class="ni-sub">${ta[i]||'Just now'}</div></div><div class="ni-unread"></div></div>`).join('')+`<div class="notif-item"><span class="ni-icon">🏆</span><div style="flex:1"><div class="ni-title">Achievement unlocked!</div><div class="ni-sub">Gold Reader — 100 chapters read</div></div></div>`;}
+function renderSidebarUpdates(){const hn=BOOKS.filter(b=>b.hasNew&&state.hearts.has(b.id));const el=document.getElementById('sidebarUpdates');const noEl=document.getElementById('sidebarNoUpdates');const cntEl=document.getElementById('sideNewCount');if(!el)return;if(!hn.length){el.innerHTML='';if(noEl)noEl.style.display='block';if(cntEl){cntEl.textContent='0 new';cntEl.style.background='';cntEl.style.color='';}return;}if(noEl)noEl.style.display='none';if(cntEl){cntEl.textContent=hn.length+' new';}el.innerHTML=hn.map(b=>`<div class="sidebar-item" onclick="openFromNotif('${b.title}')"><span class="sidebar-icon">${b.emoji}</span>${b.title.length>14?b.title.substring(0,14)+'…':b.title}<span style="margin-left:auto;font-size:8px;background:var(--rose);color:white;padding:2px 6px;border-radius:6px;font-weight:700">New</span></div>`).join('');}
+
+function doSync(){const btn=document.getElementById('syncBtn'),txt=document.getElementById('syncTxt'),time=document.getElementById('syncTime');if(btn.classList.contains('syncing'))return;btn.classList.add('syncing');txt.textContent='Syncing…';btn.style.opacity='0.8';setTimeout(()=>{btn.classList.remove('syncing');txt.textContent='Sync Data';btn.style.opacity='';const now=new Date();time.textContent=`Last saved: ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;btn.style.background='var(--jade)';showToast('✅ Sync complete!');setTimeout(()=>{btn.style.background='';},2000);},2000);}
+
+function changeAvatar(){state.avatarIdx=(state.avatarIdx+1)%state.avatarEmojis.length;const av=document.getElementById('profileAvatar');const emoji=state.avatarEmojis[state.avatarIdx];av.innerHTML=emoji+'<div class="avatar-edit-badge">✏️</div>';document.getElementById('navAv').textContent=emoji;av.style.transform='scale(1.2) rotate(15deg)';setTimeout(()=>{av.style.transform='';},300);showToast('Avatar updated '+emoji);}
+function dismissPremium(){const el=document.getElementById('premiumBanner');el.style.transition='all 0.3s';el.style.opacity='0';el.style.transform='translateY(-10px)';setTimeout(()=>{el.style.display='none';},300);}
+
+let toastTimer=null;
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');if(toastTimer)clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2400);}
+
+document.addEventListener('click',e=>{if(state.notifOpen&&!e.target.closest('#notifPanel')&&!e.target.closest('#notifBtn'))closeNotif();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(document.getElementById('readerPage').classList.contains('active'))closeReader();
+    else if(document.getElementById('bookModal').classList.contains('open'))document.getElementById('bookModal').classList.remove('open');
+    else if(state.notifOpen)closeNotif();
+  }
+});
+
+/* Writer Studio */
+const writerState={initialized:false,characters:[{name:'Lin Xiao',role:'Female Lead',personality:'Intelligent, resilient, enigmatic',goal:'Claim the throne to protect the dynasty',backstory:'Family was assassinated when she was a child'},{name:'Yuan Chen',role:'Male Lead',personality:'Cold, powerful, guarded',goal:'Avenge his father',backstory:'Betrayed by sworn brothers'}],timeline:[{ch:'1',event:'First Meeting',chars:'Lin Xiao, Yuan Chen',place:'Imperial Palace',result:'Dangerous misunderstanding',importance:'mid'},{ch:'5',event:'Secret Pact',chars:'Lin Xiao',place:'Flower Garden',result:'Both sides agree to become allies',importance:'high'}]};
+
+function initWriter(){if(writerState.initialized)return;writerState.initialized=true;renderCharTable();renderTimelineTable();document.getElementById('sHook').value='She stood before a throne soaked in blood — the very throne she had sworn never to touch.';document.getElementById('sInciting').value='On the night the Emperor died, she was accused of being the assassin.';document.getElementById('wPlace').value='The Xinhao Realm — an empire enclosed by walls of cloud on three sides.';document.getElementById('wRules').value='Those with golden royal blood can control water · Cross-class marriage is forbidden.';}
+
+function renderCharTable(){const tbody=document.getElementById('charRows');if(!tbody)return;tbody.innerHTML=writerState.characters.map((c,i)=>`<tr><td><input class="ct-input" value="${c.name}" onchange="writerState.characters[${i}].name=this.value" placeholder="Name..."></td><td><select class="ct-select" onchange="writerState.characters[${i}].role=this.value"><option ${c.role==='Female Lead'?'selected':''}>Female Lead</option><option ${c.role==='Male Lead'?'selected':''}>Male Lead</option><option ${c.role==='Villain'?'selected':''}>Villain</option><option ${c.role==='Supporting'?'selected':''}>Supporting</option><option ${c.role==='Other'?'selected':''}>Other</option></select></td><td><input class="ct-input" value="${c.personality}" onchange="writerState.characters[${i}].personality=this.value" placeholder="Personality..."></td><td><input class="ct-input" value="${c.goal}" onchange="writerState.characters[${i}].goal=this.value" placeholder="Goal..."></td><td><input class="ct-input" value="${c.backstory}" onchange="writerState.characters[${i}].backstory=this.value" placeholder="Backstory..."></td><td><button class="ct-del-btn" onclick="deleteChar(${i})">🗑</button></td></tr>`).join('');}
+
+function addCharacter(){writerState.characters.push({name:'',role:'Supporting',personality:'',goal:'',backstory:''});renderCharTable();showToast('New character added ✨');}
+function deleteChar(i){writerState.characters.splice(i,1);renderCharTable();showToast('Character removed');}
+
+function renderTimelineTable(){const tbody=document.getElementById('timelineRows');if(!tbody)return;tbody.innerHTML=writerState.timeline.map((t,i)=>`<tr><td><input class="ct-input" value="${t.ch}" onchange="writerState.timeline[${i}].ch=this.value" placeholder="Ch..." style="min-width:50px"></td><td><input class="ct-input" value="${t.event}" onchange="writerState.timeline[${i}].event=this.value" placeholder="Event name..."></td><td><input class="ct-input" value="${t.chars}" onchange="writerState.timeline[${i}].chars=this.value" placeholder="Characters..."></td><td><input class="ct-input" value="${t.place}" onchange="writerState.timeline[${i}].place=this.value" placeholder="Location..."></td><td><input class="ct-input" value="${t.result}" onchange="writerState.timeline[${i}].result=this.value" placeholder="Outcome..."></td><td><select class="ct-select" onchange="writerState.timeline[${i}].importance=this.value"><option value="low" ${t.importance==='low'?'selected':''}>🟢 Low</option><option value="mid" ${t.importance==='mid'?'selected':''}>🟡 Mid</option><option value="high" ${t.importance==='high'?'selected':''}>🔴 High</option></select></td><td><button class="ct-del-btn" onclick="deleteTimeline(${i})">🗑</button></td></tr>`).join('');}
+
+function addTimelineRow(){writerState.timeline.push({ch:'',event:'',chars:'',place:'',result:'',importance:'mid'});renderTimelineTable();showToast('Event added 📅');}
+function deleteTimeline(i){writerState.timeline.splice(i,1);renderTimelineTable();showToast('Removed');}
+function switchProject(v){if(v==='1'){showToast('🚧 Coming soon!');document.getElementById('projectSelect').value='0';}}
+function saveProject(){showToast('💾 Saved!');}
+function exportProject(){showToast('📤 Export — coming soon!');}
+function toggleGenre(el){el.classList.toggle('active');}
+function toggleRating(el){el.closest('div').querySelectorAll('.genre-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');}
+</script>
+</body>
+</html>
